@@ -216,3 +216,226 @@ graph_statistics <- function(edges, n_nodes = NULL) {
   
   return(result)
 }
+
+#' Get Edge Component Assignments
+#'
+#' Efficiently returns component assignments for each edge in the input.
+#' This is much faster than computing connected components separately and 
+#' then doing lookups in R.
+#'
+#' @param edges A two-column matrix or data.frame where each row represents an edge
+#' @param n_nodes Optional. Total number of nodes. If not provided, inferred from edges.
+#' @param compress Logical. Whether to compress component IDs. Default is TRUE.
+#' @param return_type Character. Either "list" (default) for separate from/to vectors,
+#'   or "combined" for a single vector of from components only.
+#'
+#' @return If return_type="list": List with from_components, to_components, n_components.
+#'   If return_type="combined": Integer vector of from_components (same length as input edges).
+#'
+#' @examples
+#' edges <- matrix(c(1,2, 2,3, 5,6), ncol=2, byrow=TRUE)
+#' result <- get_edge_components(edges)
+#' # result$from_components gives component ID for each 'from' node
+#' # result$to_components gives component ID for each 'to' node
+#'
+#' # For your specific use case:
+#' group_ids <- get_edge_components(edges, return_type = "combined")
+#' # group_ids is same length as nrow(edges), gives component of 'from' node
+#'
+#' @export
+get_edge_components <- function(edges, n_nodes = NULL, compress = TRUE, return_type = "list") {
+  # Input validation (same as find_connected_components)
+  if (!is.matrix(edges) && !is.data.frame(edges)) {
+    stop("edges must be a matrix or data.frame")
+  }
+  
+  if (ncol(edges) != 2) {
+    stop("edges must have exactly 2 columns")
+  }
+  
+  # Convert to matrix if data.frame
+  if (is.data.frame(edges)) {
+    edges <- as.matrix(edges)
+  }
+  
+  # Check for large integers before conversion
+  edges_numeric <- matrix(as.numeric(edges), ncol = 2)
+  max_safe_int <- .Machine$integer.max  # 2,147,483,647
+  
+  if (any(edges_numeric > max_safe_int, na.rm = TRUE)) {
+    large_vals <- unique(edges_numeric[edges_numeric > max_safe_int & !is.na(edges_numeric)])
+    stop("Node IDs exceed 32-bit integer limit (", max_safe_int, "). ",
+         "Large values found: ", paste(head(large_vals, 3), collapse = ", "), 
+         if(length(large_vals) > 3) "..." else "", ". ",
+         "Use get_edge_components_safe() for large integer support or ",
+         "remap your node IDs to smaller consecutive integers.")
+  }
+  
+  # Convert to integer (safe now)
+  edges <- matrix(as.integer(edges_numeric), ncol = 2)
+  
+  # Check for invalid values
+  if (any(edges < 1, na.rm = TRUE)) {
+    stop("All node IDs must be positive integers >= 1")
+  }
+  
+  if (any(is.na(edges))) {
+    stop("edges contains NA values. This may indicate integer overflow from large node IDs.")
+  }
+  
+  # Determine number of nodes with memory safety check
+  if (is.null(n_nodes)) {
+    n_nodes <- max(edges)
+  } else {
+    n_nodes <- as.integer(n_nodes)
+    if (n_nodes < max(edges)) {
+      stop("n_nodes must be at least as large as the maximum node ID in edges")
+    }
+  }
+  
+  # Memory safety check
+  unique_nodes <- length(unique(c(edges[, 1], edges[, 2])))
+  estimated_memory_gb <- n_nodes * 12 / 1024^3
+  
+  if (estimated_memory_gb > 8) {
+    warning("Large memory allocation required (~", round(estimated_memory_gb, 1), 
+            "GB) due to sparse node IDs.\n",
+            "Consider using get_edge_components_safe() which automatically ",
+            "remaps node IDs.\n",
+            "Unique nodes: ", unique_nodes, ", Max node ID: ", n_nodes)
+  }
+  
+  if (estimated_memory_gb > 32) {
+    stop("Memory allocation would exceed 32GB (", round(estimated_memory_gb, 1), 
+         "GB) due to sparse large node IDs.\n",
+         "Use get_edge_components_safe() instead.\n",
+         "Your graph has ", unique_nodes, " unique nodes but max ID is ", n_nodes)
+  }
+  
+  # Call C++ function
+  result <- get_edge_components_cpp(edges, n_nodes, compress)
+  
+  # Return based on requested type
+  if (return_type == "combined") {
+    return(result$from_components)
+  } else if (return_type == "list") {
+    return(result)
+  } else {
+    stop("return_type must be either 'list' or 'combined'")
+  }
+}
+
+#' Edge Component Assignment Alias
+#'
+#' Convenient alias for get_edge_components() that returns just the from_components
+#' vector, which is the same length as the input edges. Perfect for the pattern:
+#' group_id <- group_edges(edges)
+#'
+#' @param edges A two-column matrix or data.frame of edges
+#' @param n_nodes Optional. Total number of nodes. If not provided, inferred from edges.
+#' @param compress Logical. Whether to compress component IDs. Default is TRUE.
+#'
+#' @return Integer vector same length as nrow(edges), giving component ID for each edge's 'from' node
+#'
+#' @examples
+#' edges <- matrix(c(1,2, 2,3, 5,6), ncol=2, byrow=TRUE)
+#' group_id <- group_edges(edges)  # Returns c(1, 1, 2) - component of each from node
+#'
+#' @export  
+group_edges <- function(edges, n_nodes = NULL, compress = TRUE) {
+  get_edge_components(edges, n_nodes = n_nodes, compress = compress, return_type = "combined")
+}
+
+#' Add Component Column to Data.Table
+#'
+#' Efficiently adds a component ID column directly to an existing data.table.
+#' You can specify which columns represent the edges (from/to nodes).
+#' Since edges connect nodes in the same component, only one component ID per edge is needed.
+#'
+#' @param dt A data.table containing edge information
+#' @param from_col Character. Name of the column containing 'from' node IDs. Default "from".
+#' @param to_col Character. Name of the column containing 'to' node IDs. Default "to".
+#' @param component_col Character. Name for the new component column. Default "component".
+#' @param n_nodes Optional. Total number of nodes. If not provided, inferred from data.
+#' @param compress Logical. Whether to compress component IDs. Default is TRUE.
+#' @param in_place Logical. Whether to modify the data.table in place (TRUE) or return a copy (FALSE). Default TRUE.
+#'
+#' @return If in_place=TRUE, modifies dt and returns it invisibly. If in_place=FALSE, returns a copy of dt with the new column.
+#'
+#' @examples
+#' # Create a data.table with edges
+#' dt <- data.table(source = c(1,2,5), target = c(2,3,6), weight = c(0.5, 0.8, 0.3))
+#' 
+#' # Add component column (modifies dt in place)
+#' add_component_column(dt, from_col = "source", to_col = "target")
+#' # Now dt has a 'component' column
+#' 
+#' # Or specify custom column name and don't modify original
+#' dt2 <- add_component_column(dt, component_col = "group_id", in_place = FALSE)
+#'
+#' @export
+add_component_column <- function(dt, from_col = "from", to_col = "to", 
+                                component_col = "component", n_nodes = NULL, 
+                                compress = TRUE, in_place = TRUE) {
+  
+  # Input validation
+  if (!is.data.table(dt)) {
+    stop("dt must be a data.table")
+  }
+  
+  if (!from_col %in% names(dt)) {
+    stop("Column '", from_col, "' not found in data.table")
+  }
+  
+  if (!to_col %in% names(dt)) {
+    stop("Column '", to_col, "' not found in data.table")
+  }
+  
+  if (component_col %in% names(dt)) {
+    warning("Column '", component_col, "' already exists and will be overwritten")
+  }
+  
+  # Extract edge matrix
+  edges_matrix <- as.matrix(dt[, c(from_col, to_col), with = FALSE])
+  
+  # Get component IDs for each edge
+  component_ids <- group_edges(edges_matrix, n_nodes = n_nodes, compress = compress)
+  
+  # Add to data.table
+  if (in_place) {
+    # Modify in place
+    dt[, (component_col) := component_ids]
+    return(invisible(dt))
+  } else {
+    # Return a copy
+    dt_copy <- copy(dt)
+    dt_copy[, (component_col) := component_ids]
+    return(dt_copy)
+  }
+}
+
+#' Simple Edge Component Assignment
+#'
+#' Streamlined function that takes a data.table and returns just the component vector.
+#' Perfect for: dt[, component := edge_components(.SD, "from", "to")]
+#'
+#' @param dt A data.table or data.frame containing edge information  
+#' @param from_col Character. Name of the column containing 'from' node IDs.
+#' @param to_col Character. Name of the column containing 'to' node IDs.
+#' @param compress Logical. Whether to compress component IDs. Default is TRUE.
+#'
+#' @return Integer vector same length as nrow(dt), giving component ID for each edge
+#'
+#' @examples
+#' dt <- data.table(from = c(1,2,5), to = c(2,3,6))
+#' dt[, component := edge_components(.SD, "from", "to")]
+#' 
+#' # Or with custom column names
+#' dt2 <- data.table(source = c(1,2,5), target = c(2,3,6))
+#' dt2[, group_id := edge_components(.SD, "source", "target")]
+#'
+#' @export
+edge_components <- function(dt, from_col, to_col, compress = TRUE) {
+  edges_matrix <- as.matrix(dt[, c(from_col, to_col), with = FALSE])
+  group_edges(edges_matrix, compress = compress)
+}

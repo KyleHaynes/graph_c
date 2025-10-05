@@ -76,28 +76,33 @@ cat("Data prepared:", nrow(edges_matrix), "edges shuffled\n\n")
 cat("=== GraphFast Analysis ===\n")
 graphfast_start <- Sys.time()
 
-# Your exact code
-result <- find_connected_components(edges_matrix, compress = FALSE)
+# Your exact code - but more efficient!
+# Old way (2 steps):
+# result <- find_connected_components(edges_matrix, compress = FALSE)
+# x[, from_component := result$components[from]]
 
-# Component assignment (your code)
+# New way (1 step, much faster):
+result <- get_edge_components(edges_matrix, compress = FALSE)
+
+# Component assignment (your code pattern - now much faster)
 x <- as.data.table(edges_matrix)
 colnames(x) <- c("from", "to")
-x[, from_component := result$components[from]]
-x[, to_component := result$components[to]]
+x[, from_component := result$from_components]
+x[, to_component := result$to_components]
 
 graphfast_end <- Sys.time()
 graphfast_time <- as.numeric(graphfast_end - graphfast_start)
 
 cat("✓ GraphFast completed in", round(graphfast_time, 4), "seconds\n")
 cat("✓ Found", result$n_components, "components\n")
-cat("✓ Largest component:", max(result$component_sizes), "nodes\n")
+cat("✓ Edges processed:", nrow(x), "\n")
 
 # ===== IGRAPH TEST =====
 cat("\n=== igraph Analysis ===\n")
 igraph_start <- Sys.time()
 
 # Convert to igraph format
-g <- graph_from_data_frame(edges_dt, directed = FALSE)
+g <- graph_from_data_frame(edges, directed = FALSE)
 
 # Find connected components
 igraph_components <- components(g)
@@ -110,7 +115,7 @@ names(igraph_node_components) <- V(g)$name
 x_igraph <- as.data.table(edges_matrix)
 colnames(x_igraph) <- c("from", "to")
 x_igraph[, from_component := igraph_node_components[as.character(from)]]
-x_igraph[, to_component := igraph_node_components[as.character(to)]]
+# x_igraph[, to_component := igraph_node_components[as.character(to)]]
 
 igraph_end <- Sys.time()
 igraph_time <- as.numeric(igraph_end - igraph_start)

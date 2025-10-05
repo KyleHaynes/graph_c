@@ -231,3 +231,71 @@ Rcpp::List graph_stats_cpp(const Rcpp::IntegerMatrix& edges, int n_nodes) {
         Rcpp::Named("degree_stats") = degree_stats
     );
 }
+
+//' Get Edge Component Assignments
+//' 
+//' Efficiently returns component ID for each edge (both from and to nodes).
+//' This is much faster than doing component lookup in R.
+//' 
+//' @param edges IntegerMatrix with two columns (from, to)
+//' @param n_nodes Number of nodes in the graph
+//' @param compress Whether to compress component IDs to consecutive integers
+//' @return List with from_components and to_components vectors
+// [[Rcpp::export]]
+Rcpp::List get_edge_components_cpp(const Rcpp::IntegerMatrix& edges, int n_nodes, bool compress = true) {
+    UnionFind uf(n_nodes);
+    
+    // Build the union-find structure
+    for (int i = 0; i < edges.nrow(); i++) {
+        int u = edges(i, 0) - 1;  // Convert to 0-based indexing
+        int v = edges(i, 1) - 1;
+        
+        if (u >= 0 && u < n_nodes && v >= 0 && v < n_nodes) {
+            uf.union_sets(u, v);
+        }
+    }
+    
+    // Create component mapping (same logic as find_components_cpp)
+    std::map<int, int> component_map;
+    std::vector<int> node_components(n_nodes);
+    int next_component_id = 0;
+    
+    for (int i = 0; i < n_nodes; i++) {
+        int root = uf.find(i);
+        if (component_map.find(root) == component_map.end()) {
+            component_map[root] = compress ? next_component_id++ : root;
+        }
+        node_components[i] = component_map[root];
+    }
+    
+    // Convert to 1-based indexing if compressed
+    if (compress) {
+        for (int& comp : node_components) {
+            comp++;
+        }
+    }
+    
+    // Now assign components directly to edges
+    std::vector<int> from_components(edges.nrow());
+    std::vector<int> to_components(edges.nrow());
+    
+    for (int i = 0; i < edges.nrow(); i++) {
+        int u = edges(i, 0) - 1;  // Convert to 0-based
+        int v = edges(i, 1) - 1;
+        
+        if (u >= 0 && u < n_nodes && v >= 0 && v < n_nodes) {
+            from_components[i] = node_components[u];
+            to_components[i] = node_components[v];
+        } else {
+            // Invalid node - assign -1 or 0
+            from_components[i] = compress ? 0 : -1;
+            to_components[i] = compress ? 0 : -1;
+        }
+    }
+    
+    return Rcpp::List::create(
+        Rcpp::Named("from_components") = from_components,
+        Rcpp::Named("to_components") = to_components,
+        Rcpp::Named("n_components") = next_component_id
+    );
+}
