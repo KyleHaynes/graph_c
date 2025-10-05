@@ -17,10 +17,7 @@ A high-performance R package for analyzing large-scale graphs with hundreds of m
 
 ```r
 # Install development version from GitHub
-devtools::install_github("username/graphfast")
-
-# Or install from CRAN (when available)
-install.packages("graphfast")
+devtools::install_github("KyleHaynes/graphfast")
 ```
 
 ## Quick Start

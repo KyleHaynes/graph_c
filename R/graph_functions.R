@@ -39,8 +39,21 @@ find_connected_components <- function(edges, n_nodes = NULL, compress = TRUE) {
     edges <- as.matrix(edges)
   }
   
-  # Convert to integer
-  edges <- matrix(as.integer(edges), ncol = 2)
+  # Check for large integers before conversion
+  edges_numeric <- matrix(as.numeric(edges), ncol = 2)
+  max_safe_int <- .Machine$integer.max  # 2,147,483,647
+  
+  if (any(edges_numeric > max_safe_int, na.rm = TRUE)) {
+    large_vals <- unique(edges_numeric[edges_numeric > max_safe_int & !is.na(edges_numeric)])
+    stop("Node IDs exceed 32-bit integer limit (", max_safe_int, "). ",
+         "Large values found: ", paste(head(large_vals, 3), collapse = ", "), 
+         if(length(large_vals) > 3) "..." else "", ". ",
+         "Use find_connected_components_large() for large integer support or ",
+         "remap your node IDs to smaller consecutive integers.")
+  }
+  
+  # Convert to integer (safe now)
+  edges <- matrix(as.integer(edges_numeric), ncol = 2)
   
   # Check for invalid values
   if (any(edges < 1, na.rm = TRUE)) {
@@ -48,7 +61,7 @@ find_connected_components <- function(edges, n_nodes = NULL, compress = TRUE) {
   }
   
   if (any(is.na(edges))) {
-    stop("edges cannot contain NA values")
+    stop("edges contains NA values. This may indicate integer overflow from large node IDs.")
   }
   
   # Determine number of nodes
@@ -59,6 +72,25 @@ find_connected_components <- function(edges, n_nodes = NULL, compress = TRUE) {
     if (n_nodes < max(edges)) {
       stop("n_nodes must be at least as large as the maximum node ID in edges")
     }
+  }
+  
+  # Memory safety check
+  unique_nodes <- length(unique(c(edges[, 1], edges[, 2])))
+  estimated_memory_gb <- n_nodes * 12 / 1024^3  # Rough estimate
+  
+  if (estimated_memory_gb > 8) {  # Warning for >8GB allocation
+    warning("Large memory allocation required (~", round(estimated_memory_gb, 1), 
+            "GB) due to sparse node IDs.\n",
+            "Consider using find_connected_components_safe() which automatically ",
+            "remaps node IDs.\n",
+            "Unique nodes: ", unique_nodes, ", Max node ID: ", n_nodes)
+  }
+  
+  if (estimated_memory_gb > 32) {  # Hard stop for >32GB
+    stop("Memory allocation would exceed 32GB (", round(estimated_memory_gb, 1), 
+         "GB) due to sparse large node IDs.\n",
+         "Use find_connected_components_safe() instead, which handles large sparse node IDs efficiently.\n",
+         "Your graph has ", unique_nodes, " unique nodes but max ID is ", n_nodes)
   }
   
   # Call C++ function

@@ -3,11 +3,12 @@
 # Usage: Rscript performance_test.R [n_edges_millions] [n_components]
 
 library(graphfast)
+library(data.table)
 
 # Parse command line arguments or use defaults
 args <- commandArgs(trailingOnly = TRUE)
-n_edges_millions <- if(length(args) >= 1) as.numeric(args[1]) else 1  # Default 40M edges
-n_components <- if(length(args) >= 2) as.numeric(args[2]) else 1000    # Default 1000 components
+n_edges_millions <- if(length(args) >= 1) as.numeric(args[1]) else 1000  # Default 40M edges
+n_components <- if(length(args) >= 2) as.numeric(args[2]) else 40000000    # Default 1000 components
 
 cat("=== GraphFast Massive Scale Performance Test ===\n")
 cat("Target edges:", n_edges_millions, "million\n")
@@ -124,17 +125,33 @@ cat("Starting analysis of", nrow(edges), "edges...\n")
 gc_before <- gc(verbose = FALSE)
 mem_before <- sum(gc_before[, "used"] * c(gc_before[1, "max"], 8)) / 1024^2
 
+# edges <- data.table(from = c(1,2,4,5,6,22,11), to = c(11,5,6,7,8,1,2))
+
+#### Here
+edges <- as.data.table(edges)
+set.seed(1)
+edges <- edges[sample(.N)]  # Shuffle edges to avoid any ordering bias
+edges <- as.matrix(edges)
 analysis_start <- Sys.time()
 result <- find_connected_components(edges, compress = FALSE)
-analysis_end <- Sys.time()
 
-require(data.table)
+### And here
+x <- as.data.table(edges)
+colnames(x) <- c("from", "to")
+x[, from_component := result$components[from]]
+x[, to_component := result$components[to]]
+x[, .N, to_component == from_component]
+analysis_end <- Sys.time()
+(analysis_end - analysis_start)
+x
+x[, .N, to_component]
 
 gc_after <- gc(verbose = FALSE)
 mem_after <- sum(gc_after[, "used"] * c(gc_after[1, "max"], 8)) / 1024^2
-
 analysis_time <- as.numeric(analysis_end - analysis_start)
 mem_used <- mem_after - mem_before
+
+
 
 # Results
 cat("✓ ANALYSIS COMPLETE!\n")
@@ -159,23 +176,12 @@ cat("Graph generation:", round(100 * gen_time / total_time, 1), "% of time\n")
 cat("Component analysis:", round(100 * analysis_time / total_time, 1), "% of time\n")
 cat("Overall throughput:", round(nrow(edges) / total_time / 1000000, 2), "million edges/second\n")
 
-x <- as.data.table(edges)
-colnames(x) <- c("from", "to")
-
-# Add component information for both source and target nodes
-# result$components has one entry per node, indexed by node ID
-x[, from_component := result$components[from]]
-x[, to_component := result$components[to]]
 
 # Mark edges as intra-component (within same component) or inter-component
-x[, edge_type := ifelse(from_component == to_component, "intra", "inter")]
 
 # Show a summary
 cat("\n=== EDGE ANALYSIS ===\n")
 cat("Total edges:", nrow(x), "\n")
-cat("Intra-component edges:", sum(x$edge_type == "intra"), "\n")
-cat("Inter-component edges:", sum(x$edge_type == "inter"), "\n")
-cat("Percentage intra-component:", round(100 * sum(x$edge_type == "intra") / nrow(x), 2), "%\n")
 
 # Show first few rows
 cat("\nFirst 10 edges with component info:\n")
