@@ -55,6 +55,52 @@ print(stats$density)
 print(stats$degree_stats)
 ```
 
+## Data.table Integration
+
+```r
+library(graphfast)
+library(data.table)
+
+# Work directly with data.table (no matrix conversion needed)
+set.seed(123)
+edges_dt <- data.table(
+  x = sample(1E6, 1E6),
+  y = sample(1E6, 1E6)
+)
+
+# Add component column efficiently
+edges_dt[, component := edge_components(.SD, "x", "y")]
+
+# View results
+head(edges_dt)
+#         x      y component
+#     <int>  <int>     <int>
+# 1: 969167 989981         1
+# 2: 188942 802232         2
+# 3: 134058 156182         2
+# 4: 124022 544743         1
+# 5: 685285 416069         4
+# 6: 226318 949112         2
+```
+
+## String Matching
+
+```r
+library(graphfast)
+
+# Fast multi-pattern string matching
+strings <- c("error.log", "data.csv", "temp.log", "config.xml")
+patterns <- c("log", "temp")
+
+# Check if any pattern matches each string
+multi_grepl(strings, patterns)
+# Returns: TRUE FALSE TRUE FALSE
+
+# Filter strings containing any pattern
+filter_strings(strings, patterns)
+# Returns: "error.log" "temp.log"
+```
+
 ## Performance Example
 
 ```r
