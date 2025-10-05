@@ -1,0 +1,233 @@
+#include <Rcpp.h>
+#include <map>
+#include <vector>
+#include <queue>
+
+// Forward declarations to avoid conflicts
+class UnionFind {
+private:
+    std::vector<int> parent;
+    std::vector<int> rank;
+    
+public:
+    UnionFind(int n) : parent(n), rank(n, 0) {
+        for (int i = 0; i < n; i++) {
+            parent[i] = i;
+        }
+    }
+    
+    int find(int x) {
+        if (parent[x] != x) {
+            parent[x] = find(parent[x]);
+        }
+        return parent[x];
+    }
+    
+    bool union_sets(int x, int y) {
+        int px = find(x);
+        int py = find(y);
+        
+        if (px == py) return false;
+        
+        if (rank[px] < rank[py]) {
+            parent[px] = py;
+        } else if (rank[px] > rank[py]) {
+            parent[py] = px;
+        } else {
+            parent[py] = px;
+            rank[px]++;
+        }
+        return true;
+    }
+    
+    bool connected(int x, int y) {
+        return find(x) == find(y);
+    }
+};
+
+//' Find Connected Components
+// [[Rcpp::export]]
+Rcpp::List find_components_cpp(const Rcpp::IntegerMatrix& edges, int n_nodes, bool compress = true) {
+    UnionFind uf(n_nodes);
+    
+    for (int i = 0; i < edges.nrow(); i++) {
+        int u = edges(i, 0) - 1;
+        int v = edges(i, 1) - 1;
+        
+        if (u >= 0 && u < n_nodes && v >= 0 && v < n_nodes) {
+            uf.union_sets(u, v);
+        }
+    }
+    
+    std::map<int, int> component_map;
+    std::vector<int> components(n_nodes);
+    int next_component_id = 0;
+    
+    for (int i = 0; i < n_nodes; i++) {
+        int root = uf.find(i);
+        if (component_map.find(root) == component_map.end()) {
+            component_map[root] = compress ? next_component_id++ : root;
+        }
+        components[i] = component_map[root];
+    }
+    
+    std::vector<int> component_sizes(next_component_id, 0);
+    for (int comp : components) {
+        if (compress) {
+            component_sizes[comp]++;
+        }
+    }
+    
+    if (compress) {
+        for (int& comp : components) {
+            comp++;
+        }
+    }
+    
+    return Rcpp::List::create(
+        Rcpp::Named("components") = components,
+        Rcpp::Named("component_sizes") = component_sizes,
+        Rcpp::Named("n_components") = next_component_id
+    );
+}
+
+//' Check Connectivity
+// [[Rcpp::export]]
+Rcpp::LogicalVector are_connected_cpp(const Rcpp::IntegerMatrix& edges, const Rcpp::IntegerMatrix& query_pairs, int n_nodes) {
+    UnionFind uf(n_nodes);
+    
+    for (int i = 0; i < edges.nrow(); i++) {
+        int u = edges(i, 0) - 1;
+        int v = edges(i, 1) - 1;
+        
+        if (u >= 0 && u < n_nodes && v >= 0 && v < n_nodes) {
+            uf.union_sets(u, v);
+        }
+    }
+    
+    Rcpp::LogicalVector result(query_pairs.nrow());
+    for (int i = 0; i < query_pairs.nrow(); i++) {
+        int u = query_pairs(i, 0) - 1;
+        int v = query_pairs(i, 1) - 1;
+        
+        if (u >= 0 && u < n_nodes && v >= 0 && v < n_nodes) {
+            result[i] = uf.connected(u, v);
+        } else {
+            result[i] = false;
+        }
+    }
+    
+    return result;
+}
+
+//' Shortest Paths
+// [[Rcpp::export]]
+Rcpp::IntegerVector shortest_paths_cpp(const Rcpp::IntegerMatrix& edges, const Rcpp::IntegerMatrix& query_pairs, 
+                                      int n_nodes, int max_distance) {
+    
+    std::vector<std::vector<int>> adj(n_nodes);
+    
+    for (int i = 0; i < edges.nrow(); i++) {
+        int u = edges(i, 0) - 1;
+        int v = edges(i, 1) - 1;
+        
+        if (u >= 0 && u < n_nodes && v >= 0 && v < n_nodes && u != v) {
+            adj[u].push_back(v);
+            adj[v].push_back(u);
+        }
+    }
+    
+    Rcpp::IntegerVector result(query_pairs.nrow());
+    
+    for (int q = 0; q < query_pairs.nrow(); q++) {
+        int source = query_pairs(q, 0) - 1;
+        int target = query_pairs(q, 1) - 1;
+        
+        if (source < 0 || source >= n_nodes || target < 0 || target >= n_nodes) {
+            result[q] = -1;
+            continue;
+        }
+        
+        if (source == target) {
+            result[q] = 0;
+            continue;
+        }
+        
+        std::vector<int> distance(n_nodes, -1);
+        std::queue<int> bfs_queue;
+        
+        distance[source] = 0;
+        bfs_queue.push(source);
+        
+        bool found = false;
+        while (!bfs_queue.empty() && !found) {
+            int current = bfs_queue.front();
+            bfs_queue.pop();
+            
+            if (max_distance > 0 && distance[current] >= max_distance) {
+                break;
+            }
+            
+            for (int neighbor : adj[current]) {
+                if (distance[neighbor] == -1) {
+                    distance[neighbor] = distance[current] + 1;
+                    
+                    if (neighbor == target) {
+                        result[q] = distance[neighbor];
+                        found = true;
+                        break;
+                    }
+                    
+                    bfs_queue.push(neighbor);
+                }
+            }
+        }
+        
+        if (!found) {
+            result[q] = -1;
+        }
+    }
+    
+    return result;
+}
+
+//' Graph Statistics
+// [[Rcpp::export]]
+Rcpp::List graph_stats_cpp(const Rcpp::IntegerMatrix& edges, int n_nodes) {
+    std::vector<int> degree(n_nodes, 0);
+    int n_edges = edges.nrow();
+    
+    for (int i = 0; i < n_edges; i++) {
+        int u = edges(i, 0) - 1;
+        int v = edges(i, 1) - 1;
+        
+        if (u >= 0 && u < n_nodes && v >= 0 && v < n_nodes && u != v) {
+            degree[u]++;
+            degree[v]++;
+        }
+    }
+    
+    int min_degree = *std::min_element(degree.begin(), degree.end());
+    int max_degree = *std::max_element(degree.begin(), degree.end());
+    double mean_degree = 0.0;
+    for (int d : degree) {
+        mean_degree += d;
+    }
+    mean_degree /= n_nodes;
+    
+    double max_possible_edges = (double)n_nodes * (n_nodes - 1) / 2.0;
+    double density = (max_possible_edges > 0) ? n_edges / max_possible_edges : 0.0;
+    
+    Rcpp::List degree_stats = Rcpp::List::create(
+        Rcpp::Named("min") = min_degree,
+        Rcpp::Named("max") = max_degree,
+        Rcpp::Named("mean") = mean_degree
+    );
+    
+    return Rcpp::List::create(
+        Rcpp::Named("n_edges") = n_edges,
+        Rcpp::Named("n_nodes") = n_nodes,
+        Rcpp::Named("density") = density,
+        Rcpp::Named("degree_stats") = degree_stats
+    );
+}

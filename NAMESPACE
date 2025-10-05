@@ -1,0 +1,4 @@
+useDynLib(graphfast, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+exportPattern("^[[:alpha:]]+")
+importFrom("methods", "new")

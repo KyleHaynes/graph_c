@@ -1,0 +1,28 @@
+Package: graphfast
+Type: Package
+Title: Fast Graph Connectivity Analysis Using C++
+Version: 0.1.0
+Author: Your Name
+Maintainer: Your Name <your.email@example.com>
+Description: High-performance graph connectivity analysis for large-scale datasets.
+    Uses optimized C++ algorithms via Rcpp to handle hundreds of millions of 
+    node pairs efficiently. Provides functions for finding connected components,
+    shortest paths, and graph clustering with minimal memory footprint.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 3.5.0)
+Imports: 
+    Rcpp (>= 1.0.0),
+    methods
+LinkingTo: 
+    Rcpp
+SystemRequirements: C++11
+RoxygenNote: 7.3.2
+Suggests: 
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    microbenchmark
+VignetteBuilder: knitr

@@ -1,0 +1,274 @@
+---
+title: "High-Performance Graph Analysis with graphfast"
+author: "Package Author"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{High-Performance Graph Analysis with graphfast}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Introduction
+
+The `graphfast` package provides high-performance algorithms for analyzing large-scale graphs in R. Built with optimized C++ implementations, it can handle graphs with hundreds of millions of edges efficiently.
+
+## Installation
+
+```{r eval=FALSE}
+# From GitHub
+devtools::install_github("username/graphfast")
+
+# From CRAN (when available)
+install.packages("graphfast")
+```
+
+```{r}
+library(graphfast)
+```
+
+## Basic Usage
+
+### Creating a Graph
+
+Graphs in `graphfast` are represented as edge lists - two-column matrices where each row represents an edge between two nodes.
+
+```{r}
+# Create a simple graph
+edges <- matrix(c(
+  1, 2,
+  2, 3,
+  3, 4,
+  1, 4,  # Creates a cycle
+  5, 6,  # Separate component
+  7, 8,
+  8, 9
+), ncol = 2, byrow = TRUE)
+
+print(edges)
+```
+
+### Finding Connected Components
+
+Connected components are maximal sets of nodes where every pair is connected by a path.
+
+```{r}
+components <- find_connected_components(edges)
+print(components)
+```
+
+The result contains:
+- `components`: Vector assigning each node to a component ID
+- `component_sizes`: Size of each component  
+- `n_components`: Total number of components
+
+### Checking Connectivity
+
+You can efficiently check if specific pairs of nodes are connected:
+
+```{r}
+# Check if these pairs are connected
+query_pairs <- matrix(c(
+  1, 3,  # Same component
+  1, 5,  # Different components  
+  7, 9   # Same component
+), ncol = 2, byrow = TRUE)
+
+connected <- are_connected(edges, query_pairs)
+print(connected)
+```
+
+### Computing Shortest Paths
+
+Find shortest path distances between node pairs:
+
+```{r}
+distances <- shortest_paths(edges, query_pairs)
+print(distances)
+```
+
+A distance of -1 indicates no path exists between the nodes.
+
+## Performance Analysis
+
+### Large Graph Example
+
+Let's test performance on a larger graph:
+
+```{r}
+# Generate a random graph with 10,000 nodes and 50,000 edges
+set.seed(123)
+n_nodes <- 10000
+n_edges <- 50000
+
+large_edges <- matrix(
+  sample(1:n_nodes, 2 * n_edges, replace = TRUE), 
+  ncol = 2
+)
+
+# Remove self-loops
+large_edges <- large_edges[large_edges[,1] != large_edges[,2], ]
+
+cat("Graph size:", nrow(large_edges), "edges,", n_nodes, "nodes\n")
+```
+
+```{r}
+# Benchmark connected components
+system.time({
+  large_result <- find_connected_components(large_edges)
+})
+
+cat("Found", large_result$n_components, "components\n")
+cat("Largest component:", max(large_result$component_sizes), "nodes\n")
+```
+
+### Memory Efficiency
+
+The package uses memory-efficient algorithms:
+
+```{r}
+# Graph statistics without storing full adjacency matrix
+stats <- graph_statistics(large_edges, n_nodes = n_nodes)
+print(stats)
+```
+
+## Real-World Applications
+
+### Social Network Analysis
+
+```{r}
+# Simulate a social network with communities
+generate_social_network <- function(n_users, connection_prob) {
+  edges <- matrix(nrow = 0, ncol = 2)
+  
+  for (i in 1:(n_users-1)) {
+    for (j in (i+1):n_users) {
+      if (runif(1) < connection_prob) {
+        edges <- rbind(edges, c(i, j))
+      }
+    }
+  }
+  
+  return(edges)
+}
+
+# Generate a small social network
+social_edges <- generate_social_network(100, 0.05)
+cat("Social network with", nrow(social_edges), "friendships\n")
+
+# Find communities (connected components)
+communities <- find_connected_components(social_edges, n_nodes = 100)
+cat("Found", communities$n_components, "communities\n")
+cat("Community sizes:", paste(sort(communities$component_sizes, decreasing = TRUE), collapse = ", "), "\n")
+```
+
+### Web Graph Analysis
+
+```{r}
+# Simulate web page links
+web_pages <- 500
+link_prob <- 0.01
+
+web_edges <- matrix(nrow = 0, ncol = 2)
+for (i in 1:web_pages) {
+  # Each page links to a few others
+  n_links <- rpois(1, 3)
+  if (n_links > 0) {
+    targets <- sample(setdiff(1:web_pages, i), min(n_links, web_pages-1))
+    for (target in targets) {
+      web_edges <- rbind(web_edges, c(i, target))
+    }
+  }
+}
+
+cat("Web graph with", nrow(web_edges), "links between", web_pages, "pages\n")
+
+# Analyze link structure  
+web_stats <- graph_statistics(web_edges, n_nodes = web_pages)
+cat("Web graph density:", round(web_stats$density, 4), "\n")
+cat("Average out-degree:", round(web_stats$degree_stats$mean, 2), "\n")
+
+# Find strongly connected components
+web_components <- find_connected_components(web_edges, n_nodes = web_pages)
+cat("Found", web_components$n_components, "connected regions\n")
+```
+
+## Advanced Features
+
+### Batch Processing
+
+For maximum efficiency, process multiple queries together:
+
+```{r}
+# Generate many connectivity queries
+n_queries <- 1000
+query_nodes <- sample(1:100, 2 * n_queries, replace = TRUE)
+batch_queries <- matrix(query_nodes, ncol = 2)
+
+# Process all queries at once
+system.time({
+  batch_results <- are_connected(social_edges, batch_queries, n_nodes = 100)
+})
+
+cat("Processed", n_queries, "queries\n")
+cat("Connected pairs:", sum(batch_results), "out of", n_queries, "\n")
+```
+
+### Memory Monitoring
+
+```{r}
+# Monitor memory usage for large graphs
+monitor_memory <- function(expr) {
+  gc_before <- gc()
+  result <- expr
+  gc_after <- gc()
+  
+  memory_diff <- (gc_after["Vcells", "used"] - gc_before["Vcells", "used"]) * 8 / 1024^2
+  cat("Memory used:", round(memory_diff, 2), "MB\n")
+  
+  return(result)
+}
+
+# Test memory usage
+monitor_memory({
+  test_result <- find_connected_components(large_edges)
+})
+```
+
+## Algorithm Details
+
+### Connected Components
+- Uses Union-Find with path compression and union by rank
+- Time complexity: O(m × α(n)) where α is inverse Ackermann function  
+- Space complexity: O(n)
+
+### Shortest Paths
+- Breadth-first search from each source node
+- Time complexity: O(m + n) per query
+- Early termination with maximum distance limits
+
+### Memory Optimization
+- Sparse graph representation using adjacency lists
+- No full adjacency matrix storage
+- Streaming algorithms for very large datasets
+
+## Best Practices
+
+1. **Use integer node IDs** starting from 1 for best performance
+2. **Specify n_nodes** when known to avoid scanning edges
+3. **Batch queries** together rather than processing individually  
+4. **Set distance limits** for shortest path queries when appropriate
+5. **Monitor memory** usage for very large graphs
+
+## Conclusion
+
+The `graphfast` package provides efficient tools for large-scale graph analysis in R. Its optimized C++ implementation allows analysis of graphs that would be intractable with traditional R approaches, making it suitable for big data applications in social networks, bioinformatics, web analysis, and more.

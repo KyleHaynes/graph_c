@@ -1,0 +1,186 @@
+#' Find Connected Components in Large Graphs
+#'
+#' Efficiently finds all connected components in a graph represented by edge pairs.
+#' Uses optimized C++ algorithms with Union-Find data structure for handling
+#' hundreds of millions of edges.
+#'
+#' @param edges A two-column matrix or data.frame where each row represents an edge
+#'   between two nodes. Nodes should be represented as integers starting from 1.
+#' @param n_nodes Optional. Total number of nodes in the graph. If not provided,
+#'   will be inferred from the maximum node ID in edges.
+#' @param compress Logical. Whether to compress node IDs to consecutive integers.
+#'   Useful when node IDs are sparse. Default is TRUE.
+#'
+#' @return A list containing:
+#' \item{components}{Integer vector where each element represents the component ID
+#'   for the corresponding node}
+#' \item{component_sizes}{Integer vector of component sizes}
+#' \item{n_components}{Total number of connected components}
+#'
+#' @examples
+#' # Create a simple graph with 3 components
+#' edges <- matrix(c(1,2, 2,3, 5,6, 8,9, 9,10), ncol=2, byrow=TRUE)
+#' result <- find_connected_components(edges)
+#' print(result$n_components)  # Should be 3
+#'
+#' @export
+find_connected_components <- function(edges, n_nodes = NULL, compress = TRUE) {
+  # Input validation
+  if (!is.matrix(edges) && !is.data.frame(edges)) {
+    stop("edges must be a matrix or data.frame")
+  }
+  
+  if (ncol(edges) != 2) {
+    stop("edges must have exactly 2 columns")
+  }
+  
+  # Convert to matrix if data.frame
+  if (is.data.frame(edges)) {
+    edges <- as.matrix(edges)
+  }
+  
+  # Convert to integer
+  edges <- matrix(as.integer(edges), ncol = 2)
+  
+  # Check for invalid values
+  if (any(edges < 1, na.rm = TRUE)) {
+    stop("All node IDs must be positive integers >= 1")
+  }
+  
+  if (any(is.na(edges))) {
+    stop("edges cannot contain NA values")
+  }
+  
+  # Determine number of nodes
+  if (is.null(n_nodes)) {
+    n_nodes <- max(edges)
+  } else {
+    n_nodes <- as.integer(n_nodes)
+    if (n_nodes < max(edges)) {
+      stop("n_nodes must be at least as large as the maximum node ID in edges")
+    }
+  }
+  
+  # Call C++ function
+  result <- find_components_cpp(edges, n_nodes, compress)
+  
+  return(result)
+}
+
+#' Check if Two Nodes are Connected
+#'
+#' Efficiently checks if two nodes are in the same connected component.
+#' This is much faster than computing all components when you only need
+#' to check specific pairs.
+#'
+#' @param edges A two-column matrix or data.frame representing graph edges
+#' @param query_pairs A two-column matrix of node pairs to check for connectivity
+#' @param n_nodes Optional. Total number of nodes in the graph.
+#'
+#' @return Logical vector indicating whether each query pair is connected
+#'
+#' @examples
+#' edges <- matrix(c(1,2, 2,3, 5,6), ncol=2, byrow=TRUE)
+#' queries <- matrix(c(1,3, 1,5, 5,6), ncol=2, byrow=TRUE)
+#' are_connected(edges, queries)  # Returns c(TRUE, FALSE, TRUE)
+#'
+#' @export
+are_connected <- function(edges, query_pairs, n_nodes = NULL) {
+  # Input validation
+  if (!is.matrix(edges) && !is.data.frame(edges)) {
+    stop("edges must be a matrix or data.frame")
+  }
+  
+  if (!is.matrix(query_pairs) && !is.data.frame(query_pairs)) {
+    stop("query_pairs must be a matrix or data.frame")
+  }
+  
+  if (ncol(edges) != 2 || ncol(query_pairs) != 2) {
+    stop("Both edges and query_pairs must have exactly 2 columns")
+  }
+  
+  # Convert to matrices
+  edges <- matrix(as.integer(edges), ncol = 2)
+  query_pairs <- matrix(as.integer(query_pairs), ncol = 2)
+  
+  # Determine number of nodes
+  if (is.null(n_nodes)) {
+    n_nodes <- max(c(edges, query_pairs))
+  } else {
+    n_nodes <- as.integer(n_nodes)
+  }
+  
+  # Call C++ function
+  result <- are_connected_cpp(edges, query_pairs, n_nodes)
+  
+  return(result)
+}
+
+#' Find Shortest Paths Between Node Pairs
+#'
+#' Computes shortest paths between specified pairs of nodes using BFS.
+#' Optimized for multiple queries on the same graph.
+#'
+#' @param edges A two-column matrix or data.frame representing graph edges
+#' @param query_pairs A two-column matrix of source-target node pairs
+#' @param n_nodes Optional. Total number of nodes in the graph.
+#' @param max_distance Maximum distance to search. Paths longer than this
+#'   will return -1. Default is -1 (no limit).
+#'
+#' @return Integer vector of shortest path distances. Returns -1 if no path exists
+#'   or if distance exceeds max_distance.
+#'
+#' @examples
+#' edges <- matrix(c(1,2, 2,3, 3,4), ncol=2, byrow=TRUE)
+#' queries <- matrix(c(1,4, 1,5), ncol=2, byrow=TRUE)
+#' shortest_paths(edges, queries)  # Returns c(3, -1)
+#'
+#' @export
+shortest_paths <- function(edges, query_pairs, n_nodes = NULL, max_distance = -1) {
+  # Input validation (similar to above functions)
+  edges <- matrix(as.integer(edges), ncol = 2)
+  query_pairs <- matrix(as.integer(query_pairs), ncol = 2)
+  
+  if (is.null(n_nodes)) {
+    n_nodes <- max(c(edges, query_pairs))
+  } else {
+    n_nodes <- as.integer(n_nodes)
+  }
+  
+  max_distance <- as.integer(max_distance)
+  
+  # Call C++ function
+  result <- shortest_paths_cpp(edges, query_pairs, n_nodes, max_distance)
+  
+  return(result)
+}
+
+#' Memory-Efficient Graph Statistics
+#'
+#' Computes basic graph statistics without storing the full adjacency structure.
+#' Useful for very large graphs where memory is constrained.
+#'
+#' @param edges A two-column matrix or data.frame representing graph edges
+#' @param n_nodes Optional. Total number of nodes in the graph.
+#'
+#' @return A list containing:
+#' \item{n_edges}{Number of edges}
+#' \item{n_nodes}{Number of nodes}
+#' \item{density}{Graph density}
+#' \item{degree_stats}{Summary statistics of node degrees}
+#'
+#' @export
+graph_statistics <- function(edges, n_nodes = NULL) {
+  edges <- matrix(as.integer(edges), ncol = 2)
+  
+  if (is.null(n_nodes)) {
+    n_nodes <- max(edges)
+  } else {
+    n_nodes <- as.integer(n_nodes)
+  }
+  
+  # Call C++ function
+  result <- graph_stats_cpp(edges, n_nodes)
+  
+  return(result)
+}
