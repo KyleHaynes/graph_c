@@ -439,3 +439,110 @@ edge_components <- function(dt, from_col, to_col, compress = TRUE) {
   edges_matrix <- as.matrix(dt[, c(from_col, to_col), with = FALSE])
   group_edges(edges_matrix, compress = compress)
 }
+
+#' Multi-Pattern String Matching
+#'
+#' Fast multi-pattern string matching using C++. Similar to applying
+#' grepl(pattern, x, fixed=TRUE) for multiple patterns, but much faster.
+#'
+#' @param strings Character vector of strings to search in
+#' @param patterns Character vector of fixed patterns to search for
+#' @param match_any Logical. If TRUE (default), returns TRUE if ANY pattern matches.
+#'   If FALSE, returns detailed results for each pattern.
+#' @param ignore_case Logical. Whether to ignore case when matching. Default FALSE.
+#' @param return_matrix Logical. If TRUE and match_any=FALSE, returns a matrix.
+#'   If FALSE and match_any=FALSE, returns a data.frame. Default FALSE.
+#'
+#' @return If match_any=TRUE: Logical vector same length as strings.
+#'   If match_any=FALSE: Matrix or data.frame showing which patterns match which strings.
+#'
+#' @examples
+#' strings <- c("hello world", "goodbye", "hello there", "world peace")
+#' patterns <- c("hello", "world")
+#' 
+#' # Check if any pattern matches each string
+#' multi_grepl(strings, patterns)
+#' 
+#' # Get detailed results
+#' multi_grepl(strings, patterns, match_any = FALSE)
+#' 
+#' # Case insensitive matching
+#' multi_grepl(c("Hello", "WORLD"), c("hello", "world"), ignore_case = TRUE)
+#'
+#' @export
+multi_grepl <- function(strings, patterns, match_any = TRUE, ignore_case = FALSE, return_matrix = FALSE) {
+  
+  # Input validation
+  if (!is.character(strings)) {
+    stop("strings must be a character vector")
+  }
+  
+  if (!is.character(patterns)) {
+    stop("patterns must be a character vector")
+  }
+  
+  if (length(patterns) == 0) {
+    if (match_any) {
+      return(rep(FALSE, length(strings)))
+    } else {
+      return(matrix(FALSE, nrow = length(strings), ncol = 0))
+    }
+  }
+  
+  if (match_any) {
+    # Use optimized single-vector version
+    return(multi_grepl_any_cpp(strings, patterns, ignore_case))
+  } else {
+    # Use matrix version
+    result_matrix <- multi_grepl_cpp(strings, patterns, match_any = FALSE, ignore_case)
+    
+    if (return_matrix) {
+      # Add row and column names
+      rownames(result_matrix) <- paste0("string_", seq_len(nrow(result_matrix)))
+      colnames(result_matrix) <- patterns
+      return(result_matrix)
+    } else {
+      # Convert to data.frame with better column names
+      result_df <- as.data.frame(result_matrix)
+      colnames(result_df) <- patterns
+      rownames(result_df) <- NULL
+      return(result_df)
+    }
+  }
+}
+
+#' Fast String Filtering
+#'
+#' Efficiently filter strings that contain any of the specified patterns.
+#' Equivalent to strings[grepl(pattern1, strings, fixed=TRUE) | grepl(pattern2, strings, fixed=TRUE) | ...]
+#' but much faster for multiple patterns.
+#'
+#' @param strings Character vector of strings to filter
+#' @param patterns Character vector of patterns to search for
+#' @param ignore_case Logical. Whether to ignore case. Default FALSE.
+#' @param invert Logical. If TRUE, return strings that do NOT match any pattern. Default FALSE.
+#'
+#' @return Character vector of strings that match (or don't match if invert=TRUE) any pattern
+#'
+#' @examples
+#' strings <- c("apple pie", "banana bread", "cherry tart", "date cake")
+#' patterns <- c("apple", "cherry")
+#' 
+#' # Get strings containing any pattern
+#' filter_strings(strings, patterns)
+#' # Returns: "apple pie" "cherry tart"
+#' 
+#' # Get strings NOT containing any pattern
+#' filter_strings(strings, patterns, invert = TRUE)
+#' # Returns: "banana bread" "date cake"
+#'
+#' @export
+filter_strings <- function(strings, patterns, ignore_case = FALSE, invert = FALSE) {
+  matches <- multi_grepl(strings, patterns, match_any = TRUE, ignore_case = ignore_case)
+  
+  if (invert) {
+    return(strings[!matches])
+  } else {
+    return(strings[matches])
+  }
+}

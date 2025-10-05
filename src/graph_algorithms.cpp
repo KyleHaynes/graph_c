@@ -299,3 +299,143 @@ Rcpp::List get_edge_components_cpp(const Rcpp::IntegerMatrix& edges, int n_nodes
         Rcpp::Named("n_components") = next_component_id
     );
 }
+
+//' Multi-Pattern Fixed String Matching
+//'
+//' Fast C++ implementation for finding multiple fixed patterns in strings.
+//' Equivalent to multiple grepl(pattern, x, fixed=TRUE) calls but much faster.
+//'
+//' @param strings Character vector of strings to search in
+//' @param patterns Character vector of fixed patterns to search for
+//' @param match_any Logical. If TRUE, returns TRUE if ANY pattern matches.
+//'   If FALSE, returns a matrix showing which pattern matches which string.
+//' @param ignore_case Logical. Whether to ignore case when matching. Default FALSE.
+//'
+//' @return If match_any=TRUE: Logical vector same length as strings.
+//'   If match_any=FALSE: Logical matrix with nrow=length(strings), ncol=length(patterns).
+//'
+//' @examples
+//' strings <- c("hello world", "goodbye", "hello there", "world peace")
+//' patterns <- c("hello", "world")
+//' 
+//' # Check if ANY pattern matches each string
+//' multi_grepl_cpp(strings, patterns, match_any = TRUE)
+//' # Returns: TRUE FALSE TRUE TRUE
+//' 
+//' # Get detailed matrix of which patterns match which strings
+//' multi_grepl_cpp(strings, patterns, match_any = FALSE)
+//' # Returns 4x2 matrix showing hello/world matches for each string
+//'
+// [[Rcpp::export]]
+Rcpp::LogicalMatrix multi_grepl_cpp(const Rcpp::CharacterVector& strings,
+                                   const Rcpp::CharacterVector& patterns,
+                                   bool match_any = true,
+                                   bool ignore_case = false) {
+    
+    int n_strings = strings.size();
+    int n_patterns = patterns.size();
+    
+    // Convert patterns to std::string for easier manipulation
+    std::vector<std::string> pattern_vec(n_patterns);
+    for (int p = 0; p < n_patterns; p++) {
+        pattern_vec[p] = Rcpp::as<std::string>(patterns[p]);
+        if (ignore_case) {
+            // Convert pattern to lowercase
+            std::transform(pattern_vec[p].begin(), pattern_vec[p].end(), 
+                         pattern_vec[p].begin(), ::tolower);
+        }
+    }
+    
+    if (match_any) {
+        // Return vector indicating if ANY pattern matches each string
+        Rcpp::LogicalVector result(n_strings);
+        
+        for (int i = 0; i < n_strings; i++) {
+            std::string str = Rcpp::as<std::string>(strings[i]);
+            if (ignore_case) {
+                std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+            }
+            
+            bool found_match = false;
+            for (int p = 0; p < n_patterns && !found_match; p++) {
+                if (str.find(pattern_vec[p]) != std::string::npos) {
+                    found_match = true;
+                }
+            }
+            result[i] = found_match;
+        }
+        
+        // Convert to matrix format for consistent return type
+        Rcpp::LogicalMatrix result_matrix(n_strings, 1);
+        for (int i = 0; i < n_strings; i++) {
+            result_matrix(i, 0) = result[i];
+        }
+        return result_matrix;
+        
+    } else {
+        // Return matrix showing which patterns match which strings
+        Rcpp::LogicalMatrix result(n_strings, n_patterns);
+        
+        for (int i = 0; i < n_strings; i++) {
+            std::string str = Rcpp::as<std::string>(strings[i]);
+            if (ignore_case) {
+                std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+            }
+            
+            for (int p = 0; p < n_patterns; p++) {
+                result(i, p) = (str.find(pattern_vec[p]) != std::string::npos);
+            }
+        }
+        
+        return result;
+    }
+}
+
+//' Multi-Pattern Fixed String Matching (Any Match)
+//'
+//' Simplified version that returns TRUE if any pattern matches each string.
+//' Optimized for the common use case of "does this string contain any of these patterns?"
+//'
+//' @param strings Character vector of strings to search in
+//' @param patterns Character vector of fixed patterns to search for
+//' @param ignore_case Logical. Whether to ignore case. Default FALSE.
+//'
+//' @return Logical vector same length as strings
+//'
+// [[Rcpp::export]]
+Rcpp::LogicalVector multi_grepl_any_cpp(const Rcpp::CharacterVector& strings,
+                                        const Rcpp::CharacterVector& patterns,
+                                        bool ignore_case = false) {
+    
+    int n_strings = strings.size();
+    int n_patterns = patterns.size();
+    
+    // Convert patterns to std::string
+    std::vector<std::string> pattern_vec(n_patterns);
+    for (int p = 0; p < n_patterns; p++) {
+        pattern_vec[p] = Rcpp::as<std::string>(patterns[p]);
+        if (ignore_case) {
+            std::transform(pattern_vec[p].begin(), pattern_vec[p].end(), 
+                         pattern_vec[p].begin(), ::tolower);
+        }
+    }
+    
+    Rcpp::LogicalVector result(n_strings);
+    
+    for (int i = 0; i < n_strings; i++) {
+        std::string str = Rcpp::as<std::string>(strings[i]);
+        if (ignore_case) {
+            std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+        }
+        
+        bool found_match = false;
+        for (int p = 0; p < n_patterns && !found_match; p++) {
+            if (str.find(pattern_vec[p]) != std::string::npos) {
+                found_match = true;
+            }
+        }
+        result[i] = found_match;
+    }
+    
+    return result;
+}

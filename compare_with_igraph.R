@@ -65,8 +65,8 @@ cat("=== Data Preparation (Your Code) ===\n")
 # Generate massive dataset: 50M edges using your sampling approach
 cat("Generating 50 million edges using sample(1E8, 5E7)...\n")
 edges_dt <- data.table(
-  x = sample(1E8, 5E7),  # 50M edges from 100M possible node IDs
-  y = sample(1E8, 5E7)
+  x = sample(1E9, 180E6),  # 50M edges from 100M possible node IDs
+  y = sample(1E9, 180E6)
 )
 
 cat("Generated", nrow(edges_dt), "edges\n")
