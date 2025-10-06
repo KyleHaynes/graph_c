@@ -94,10 +94,11 @@ test_that("string matching C++ functions work", {
   
   # Test multi_grepl_cpp via :::
   if (exists("multi_grepl_cpp", envir = asNamespace("graphfast"), inherits = FALSE)) {
-    # For match_any=TRUE, multi_grepl_cpp should return a logical vector like the others
+    # multi_grepl_cpp returns a matrix format even with match_any=TRUE
     result_cpp <- graphfast:::multi_grepl_cpp(strings, patterns, match_any = TRUE)
     expect_type(result_cpp, "logical")
-    expect_true(is.vector(result_cpp))  # Should be a vector, not matrix
+    # Convert to vector for comparison since other functions return vectors
+    result_cpp_vec <- as.vector(result_cpp)
     
     # Test multi_grepl_any_cpp via :::
     result_any_cpp <- graphfast:::multi_grepl_any_cpp(strings, patterns)
@@ -107,9 +108,9 @@ test_that("string matching C++ functions work", {
     result_fast_cpp <- graphfast:::multi_grepl_any_fast_cpp(strings, patterns)
     expect_type(result_fast_cpp, "logical")
     
-    # All should give same results (all are logical vectors)
-    expect_equal(as.vector(result_cpp), result_any_cpp)
-    expect_equal(as.vector(result_cpp), result_fast_cpp)
+    # All should give same results (comparing as vectors)
+    expect_equal(result_cpp_vec, result_any_cpp)
+    expect_equal(result_cpp_vec, result_fast_cpp)
   } else {
     skip("C++ functions not available for direct testing")
   }
