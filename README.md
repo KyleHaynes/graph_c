@@ -25,7 +25,7 @@ A high-performance R package for analyzing large-scale graphs with hundreds of m
 ### String Matching
 - **Multi-pattern matching**: Fast C++ implementation of fixed string search
 - **Convenience operators**: `%fgrepl%` and `%fgrepli%` for easy pattern matching
-- **Performance optimized**: Significantly faster than base R grepl() for multiple patterns
+- **Performance optimized**: Significantly faster than base R grepl() for multiple fixed patterns
 
 ## Installation
 

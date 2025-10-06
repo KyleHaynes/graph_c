@@ -66,19 +66,7 @@ graph_c/
 - Rtools (Windows) or development tools (macOS/Linux)
 - C++11 compatible compiler
 
-### Method 1: Automated Build (Recommended)
-
-#### Windows (PowerShell):
-```powershell
-.\build.ps1
-```
-
-#### R Console:
-```r
-source("build_package.R")
-```
-
-### Method 2: Manual Installation
+### Manual Installation
 ```r
 # Install dependencies
 install.packages(c("devtools", "Rcpp", "RcppArmadillo", "testthat"))
@@ -218,19 +206,63 @@ To run all examples and see comprehensive output:
 # Source all examples
 example_files <- list.files("examples", pattern = "\\.R$", full.names = TRUE)
 for (file in example_files) {
-  cat("\n" , "="*50, "\n")
+  cat("\n" , rep("=", 50), "\n")
   cat("Running:", basename(file), "\n")
-  cat("="*50, "\n")
+  cat(rep("=", 50), "\n")
   source(file)
 }
 ```
 
-Or run individual examples:
+### Run Individual Examples
+
+#### Core Graph Analysis
 ```r
-source("examples/demo.R")                    # Main demo
-source("examples/compare_with_igraph.R")     # Performance comparison  
-source("examples/demo_group_id.R")           # Entity resolution demo
-source("examples/performance_test.R")        # Scalability test
+source("examples/basic.R")                   # Basic performance test (180M edges)
+source("examples/demo.R")                    # Main demonstration script
+source("examples/test_edge_components.R")    # Edge component function tests
+source("examples/comprehensive_test.R")      # Extensive algorithm test suite
+source("examples/test_simple.R")             # Basic smoke tests
+```
+
+#### Performance Benchmarking
+```r
+source("examples/compare_with_igraph.R")     # GraphFast vs igraph comparison
+source("examples/performance_test.R")        # Scalable performance benchmark
+source("examples/minimal_comparison.R")      # Lightweight comparison test
+```
+
+#### Entity Resolution and Deduplication
+```r
+source("examples/demo_group_id.R")           # Comprehensive group_id demonstration
+source("examples/test_group_id.R")           # Quick group_id validation test
+source("examples/real_world_group_id.R")     # Realistic customer deduplication
+source("examples/group_id_benchmark.R")      # group_id performance benchmarking
+```
+
+#### String Matching and Processing
+```r
+source("examples/test_string_matching.R")    # Multi-pattern string matching tests
+source("examples/string_benchmark.R")        # String matching performance (5M+ strings)
+source("examples/demo_fgrepl.R")             # Fast string matching demo (1M strings, 30 patterns)
+```
+
+#### Memory and Stability Testing
+```r
+source("examples/test_memory_safe.R")        # Memory safety validation
+source("examples/test_large_integers.R")     # Large integer handling tests
+source("examples/test_large_integer_fix.R")  # Large integer fixes validation
+```
+
+#### Quick Start Examples
+```r
+# Run core functionality demos
+source("examples/demo.R")                    # Main demo - start here
+source("examples/demo_group_id.R")           # Entity resolution examples
+source("examples/demo_fgrepl.R")             # String matching examples
+
+# Run performance comparisons
+source("examples/compare_with_igraph.R")     # vs igraph comparison
+source("examples/performance_test.R")        # Scalability testing
 ```
 
 ## Development
@@ -257,35 +289,12 @@ result <- find_connected_components(large_edges)
 Rprof(NULL)
 summaryRprof("profile.out")
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make changes and add tests
-4. Run tests: `devtools::test()`
-5. Check package: `devtools::check()`
-6. Submit pull request
-
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Citation
-
-```bibtex
-@misc{graphfast2025,
-  title={GraphFast: High-Performance Graph Analysis in R},
-  author={Your Name},
-  year={2025},
-  url={https://github.com/username/graphfast}
-}
-```
 
 ## Support
 
 - Documentation: See vignettes and README.md
 - Issues: GitHub issue tracker
 - Examples: Run `source("examples/demo.R")`
-
-This package enables analysis of massive graphs that would be impossible with traditional R approaches, making it suitable for big data applications in research and industry.

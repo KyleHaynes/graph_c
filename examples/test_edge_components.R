@@ -19,10 +19,9 @@ test_edges <- matrix(c(
   10, 11   # Component 3: single edge
 ), ncol = 2, byrow = TRUE)
 
-edges <- data.table(from = sample(1:1E8, 9E7), to = sample(1:1E8, 9E7))
-setnames(edges, c("from", "to"))
-
-edges[, component := edge_components(.SD, "from", "to")]
+# edges <- data.table(from = sample(1:1E8, 9E7), to = sample(1:1E8, 9E7))
+# setnames(edges, c("from", "to"))
+# edges[, component := edge_components(.SD, "from", "to")]
 
 
 cat("Test edges:\n")
