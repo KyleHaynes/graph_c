@@ -13,15 +13,13 @@ cat("=== GraphFast vs igraph Comparison ===\n\n")
 
 # Generate test data - simple graph for comparison
 set.seed(42)
-n_edges <- 1000000  # 1 million edges
-n_nodes <- 100000   # 100k nodes
 
-cat("Generating test graph with", n_edges, "edges and", n_nodes, "possible nodes\n")
+cat("Generating test graph\n")
 
 # Create simple random edges using sample
 edges_dt <- data.table(
-  from = sample(1:n_nodes, n_edges, replace = TRUE),
-  to = sample(1:n_nodes, n_edges, replace = TRUE)
+  from = sample(5E8, 5E5),
+  to = sample(5E8, 5E5)
 )
 
 # Remove self-loops
@@ -80,58 +78,26 @@ cat("Speedup:       ", round(speedup, 2), "x",
 cat("\n=== Results Validation ===\n")
 
 # Check if same number of components found
-n_components_graphfast <- if (needs_safe_version) result$n_components else result$n_components
-components_match <- n_components_graphfast == igraph_components$no
+components_match <- result$n_components == igraph_components$no
 cat("Components count match:", components_match, 
-    "(", n_components_graphfast, "vs", igraph_components$no, ")\n")
-
-# Check if component assignments are consistent
-# Note: Component IDs may differ, but the grouping should be the same
-graphfast_groups <- x[, .(edges = .N), by = .(from_component, to_component)][order(from_component, to_component)]
-igraph_groups <- x_igraph[, .(edges = .N), by = .(from_component, to_component)][order(from_component, to_component)]
-
-# For validation, check if nodes that are in same component in GraphFast are also same in igraph
-validation_sample <- sample(nrow(x), min(1000, nrow(x)))
-same_component_graphfast <- x[validation_sample, from_component == to_component]
-same_component_igraph <- x_igraph[validation_sample, from_component == to_component]
-consistency_match <- all(same_component_graphfast == same_component_igraph, na.rm = TRUE)
-
-cat("Edge component consistency:", consistency_match, "\n")
-
-# Show sample results
-cat("\n=== Sample Results (First 10 edges) ===\n")
-cat("GraphFast results:\n")
-print(head(x[, .(from, to, from_component, to_component)], 10))
-
-cat("\nigraph results:\n")
-print(head(x_igraph[, .(from, to, from_component, to_component)], 10))
-
-# ===== MEMORY COMPARISON =====
-cat("\n=== Memory Usage ===\n")
-gc_info <- gc(verbose = FALSE)
-cat("Current memory usage:", round(sum(gc_info[, "used"] * c(gc_info[1, "max"], 8)) / 1024^2, 1), "MB\n")
+    "(", result$n_components, "vs", igraph_components$no, ")\n")
 
 cat("\n=== Summary ===\n")
-cat("✓ MASSIVE SCALE TEST: Analyzed", round(nrow(edges_matrix) / 1000000, 1), "MILLION edges\n")
+cat("✓ Analyzed", round(nrow(edges_matrix) / 1000000, 1), "million edges\n")
 cat("✓ Node ID range:", min(edges_matrix), "to", max(edges_matrix), "\n")
 cat("✓ GraphFast:", round(graphfast_time, 2), "sec (", round(nrow(edges_matrix) / graphfast_time / 1000000, 1), "M edges/sec)\n")
 cat("✓ igraph:   ", round(igraph_time, 2), "sec (", round(nrow(edges_matrix) / igraph_time / 1000000, 1), "M edges/sec)\n")
 cat("✓ Speedup:", round(speedup, 2), "x\n")
-cat("✓ Results consistent:", consistency_match, "\n")
+cat("✓ Components match:", components_match, "\n")
 
 if (speedup > 1.1) {
-  cat("🚀 GraphFast shows significant performance advantage on massive datasets!\n")
-  if (speedup > 10) {
-    cat("⚡ EXTREME PERFORMANCE: GraphFast is over 10x faster!\n")
-  }
+  cat("🚀 GraphFast shows performance advantage!\n")
 } else if (speedup < 0.9) {
   cat("📊 igraph shows performance advantage\n")
 } else {
   cat("⚖️  Performance is comparable between methods\n")
 }
 
-if (nrow(edges_matrix) >= 50000000) {
-  cat("🎯 MASSIVE SCALE ACHIEVEMENT: Successfully processed 50+ million edges!\n")
-}
+d <- data.table(a = result$components, b = igraph_components$membership)
 
 cat("\nComparison completed successfully!\n")

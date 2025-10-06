@@ -245,52 +245,6 @@ print(object.size(edges))  # Size of edge list
 # The algorithm uses O(n) additional memory, not O(n²)
 ```
 
-## Use Cases
-
-### Social Network Analysis
-```r
-# Analyze friendship networks
-friendships <- read.csv("friendships.csv")  # user1, user2 columns
-edges <- as.matrix(friendships[, c("user1", "user2")])
-
-# Find communities
-communities <- find_connected_components(edges)
-largest_community <- which.max(communities$component_sizes)
-
-# Check if specific users are connected
-user_pairs <- matrix(c(123, 456, 789, 101112), ncol = 2, byrow = TRUE)
-connected <- are_connected(edges, user_pairs)
-```
-
-### Biological Networks
-```r
-# Protein-protein interactions
-ppi_edges <- read.table("protein_interactions.txt")
-interactions <- as.matrix(ppi_edges)
-
-# Find protein complexes (connected components)
-complexes <- find_connected_components(interactions)
-
-# Compute shortest paths between proteins
-protein_pairs <- matrix(c("PROTEIN_A", "PROTEIN_B"), ncol = 2)
-# Convert protein names to IDs first
-distances <- shortest_paths(interactions, protein_pairs)
-```
-
-### Web Graph Analysis
-```r
-# Analyze web page link structure
-page_links <- read.csv("web_links.csv")  # from_page, to_page
-edges <- as.matrix(page_links)
-
-# Find strongly connected components
-components <- find_connected_components(edges)
-
-# Analyze link structure
-stats <- graph_statistics(edges)
-print(paste("Web graph density:", stats$density))
-```
-
 ## Algorithm Details
 
 ### Connected Components
@@ -372,27 +326,6 @@ Compute basic graph statistics efficiently.
 | network | ✓ | ✓ | O(n²) | Moderate |
 | sna | ✓ | ✓ | O(n²) | Slow |
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
 ## License
 
 MIT License. See LICENSE file for details.
-
-## Citation
-
-If you use this package in your research, please cite:
-
-```
-@misc{graphfast,
-  title={graphfast: High-Performance Graph Analysis in R},
-  author={Your Name},
-  year={2025},
-  url={https://github.com/username/graphfast}
-}
-```
