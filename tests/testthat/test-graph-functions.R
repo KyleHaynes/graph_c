@@ -1,12 +1,16 @@
 test_that("find_connected_components works correctly", {
-  # Simple graph with 3 components
+  # Simple graph: 1-2-3, 5-6, 8-9-10 (3 components)
   edges <- matrix(c(1,2, 2,3, 5,6, 8,9, 9,10), ncol=2, byrow=TRUE)
   result <- find_connected_components(edges)
   
+  # Debug: check what we actually get
+  # The graph has nodes: 1,2,3,5,6,8,9,10 = 8 unique nodes
+  # Components: {1,2,3}, {5,6}, {8,9,10} = 3 components
+  
   expect_equal(result$n_components, 3)
-  expect_equal(length(result$components), 10)
+  expect_equal(length(result$components), 8)  # 8 unique nodes, not 10
   expect_equal(length(result$component_sizes), 3)
-  expect_equal(sum(result$component_sizes), 10)
+  expect_equal(sum(result$component_sizes), 8)  # Total nodes = 8
 })
 
 test_that("are_connected works correctly", {
