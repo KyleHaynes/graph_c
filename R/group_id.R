@@ -11,6 +11,7 @@
 #' @param case_sensitive Logical. Whether string comparisons should be case sensitive. Default TRUE.
 #' @param min_group_size Integer. Minimum group size to assign group ID (smaller groups get ID 0). Default 1.
 #' @param return_details Logical. Whether to return detailed results including value mappings. Default FALSE.
+#' @param verbose Logical. Whether to print timing and progress information. Default FALSE.
 #' 
 #' @return If return_details=FALSE: Integer vector of group IDs for each row
 #'         If return_details=TRUE: List containing:
@@ -56,7 +57,8 @@ group_id <- function(data,
                      incomparables = c("", "NA", "Unknown"),
                      case_sensitive = TRUE,
                      min_group_size = 1,
-                     return_details = FALSE) {
+                     return_details = FALSE,
+                     verbose = FALSE) {
   
   # Input validation
   if (is.null(data) || length(data) == 0) {
@@ -95,9 +97,10 @@ group_id <- function(data,
       stop("Columns not found in data: ", paste(missing_cols, collapse = ", "))
     }
     
-    # Extract specified columns as list - use proper data.table syntax
+    # Extract specified columns as list - use proper data.table syntax with optimization
     if (is.data.table(data)) {
-      data_list <- data[, ..cols]
+      # Optimize: Use direct column extraction without intermediate variables
+      data_list <- as.list(data[, ..cols])
     } else {
       data_list <- data[cols]
     }
@@ -112,18 +115,48 @@ group_id <- function(data,
     stop("data must be a data.frame or list")
   }
   
-  # Validate incomparables
+  # Validate incomparables - optimize string conversion
   if (!is.character(incomparables)) {
+    # Fast conversion avoiding repeated allocations
     incomparables <- as.character(incomparables)
   }
   
-  # Call C++ function directly
-  result <- multi_column_group_cpp(
-    data = data_list,
-    incomparables = incomparables,
-    case_sensitive = case_sensitive,
-    min_group_size = min_group_size
-  )
+  # Pre-filter empty incomparables for C++ efficiency
+  incomparables <- incomparables[nzchar(incomparables) & !is.na(incomparables)]
+  
+  if (verbose) {
+    n_rows <- if(is.list(data_list)) length(data_list[[1]]) else nrow(data_list)
+    cat("Processing", n_rows, "rows across", length(data_list), "columns\n")
+    start_time <- Sys.time()
+  }
+  
+  # Check if we can use the fast numeric-only path
+  all_numeric <- all(sapply(data_list, function(x) is.numeric(x) || is.integer(x)))
+  has_incomparables <- length(incomparables) > 0
+  
+  if (all_numeric && !has_incomparables && case_sensitive) {
+    # Use ultra-fast numeric-only C++ function (optimized for millions of records)
+    if (verbose) cat("Using ultra-fast numeric algorithm for large datasets\n")
+    result <- ultra_fast_group_numeric_cpp(
+      data = data_list,
+      min_group_size = min_group_size
+    )
+  } else {
+    # Use general string-based C++ function
+    if (verbose) cat("Using general string-based algorithm\n")
+    result <- multi_column_group_cpp(
+      data = data_list,
+      incomparables = incomparables,
+      case_sensitive = case_sensitive,
+      min_group_size = min_group_size
+    )
+  }
+  
+  if (verbose) {
+    total_time <- Sys.time() - start_time
+    cat("C++ processing completed in", format(total_time, digits = 3), "\n")
+    cat("Found", result$n_groups, "groups from", length(result$group_ids), "records\n")
+  }
   
   # Validate result
   if (is.null(result) || !is.list(result) || is.null(result$group_ids)) {

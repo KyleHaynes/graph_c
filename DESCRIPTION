@@ -15,7 +15,8 @@ Depends:
 Imports: 
     Rcpp (>= 1.0.0),
     methods,
-    data.table
+    data.table,
+    fastmatch
 LinkingTo: 
     Rcpp
 SystemRequirements: C++11
