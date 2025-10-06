@@ -14,7 +14,8 @@ Depends:
     R (>= 3.5.0)
 Imports: 
     Rcpp (>= 1.0.0),
-    methods
+    methods,
+    data.table
 LinkingTo: 
     Rcpp
 SystemRequirements: C++11
@@ -24,6 +25,5 @@ Suggests:
     knitr,
     rmarkdown,
     microbenchmark,
-    stringi,
-    data.table
+    stringi
 VignetteBuilder: knitr

@@ -89,11 +89,11 @@ multi_grepl <- function(strings, patterns, match_any = TRUE, ignore_case = FALSE
 #' # Returns: TRUE FALSE FALSE TRUE
 #' 
 #' # Equivalent to:
-#' result <- multi_grepl_any_fast_cpp(strings, patterns)
+#' result <- graphfast:::multi_grepl_any_fast_cpp(strings, patterns)
 #'
 #' @export
 `%fgrepl%` <- function(strings, patterns) {
-  multi_grepl_any_fast_cpp(strings, patterns, ignore_case = FALSE)
+  graphfast:::multi_grepl_any_fast_cpp(strings, patterns, ignore_case = FALSE)
 }
 
 #' Fast Multi-Pattern String Matching Infix Operator (Case-Insensitive)
