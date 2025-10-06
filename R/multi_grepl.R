@@ -115,5 +115,5 @@ multi_grepl <- function(strings, patterns, match_any = TRUE, ignore_case = FALSE
 #'
 #' @export
 `%fgrepli%` <- function(strings, patterns) {
-  multi_grepl_any_fast_cpp(strings, patterns, ignore_case = TRUE)
+  graphfast:::multi_grepl_any_fast_cpp(strings, patterns, ignore_case = TRUE)
 }

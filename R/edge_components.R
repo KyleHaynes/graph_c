@@ -12,6 +12,7 @@
 #' @return Integer vector same length as nrow(dt), giving component ID for each edge
 #'
 #' @examples
+#' require("data.table")
 #' dt <- data.table(from = c(1,2,5), to = c(2,3,6))
 #' dt[, component := edge_components(.SD, "from", "to")]
 #' 

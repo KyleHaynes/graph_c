@@ -16,13 +16,10 @@
 #'
 #' @examples
 #' edges <- matrix(c(1,2, 2,3, 5,6), ncol=2, byrow=TRUE)
-#' result <- get_edge_components(edges)
-#' # result$from_components gives component ID for each 'from' node
-#' # result$to_components gives component ID for each 'to' node
-#'
+#' get_edge_components(edges)
+#' 
 #' # For your specific use case:
-#' group_ids <- get_edge_components(edges, return_type = "combined")
-#' # group_ids is same length as nrow(edges), gives component of 'from' node
+#' get_edge_components(edges, return_type = "combined")
 #'
 #' @export
 get_edge_components <- function(edges, n_nodes = NULL, compress = TRUE, return_type = "list") {

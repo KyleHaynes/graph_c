@@ -47,7 +47,7 @@
 #' phone2 <- c("", "987-654-3210", "555-1234", "123-456-7890", "")
 #' email <- c("john@email.com", "jane@email.com", "bob@email.com", "john@email.com", "alice@email.com")
 #' 
-#' group_ids <- group_id(list(phone1, phone2, email), incomparables = c(""))
+#' group_id(list(phone1, phone2, email), incomparables = c(""))
 #' 
 #' @export
 group_id <- function(data, 
@@ -95,8 +95,12 @@ group_id <- function(data,
       stop("Columns not found in data: ", paste(missing_cols, collapse = ", "))
     }
     
-    # Extract specified columns as list
-    data_list <- data[cols]
+    # Extract specified columns as list - use proper data.table syntax
+    if (is.data.table(data)) {
+      data_list <- data[, ..cols]
+    } else {
+      data_list <- data[cols]
+    }
   } else if (is.list(data)) {
     # Use list directly
     data_list <- data
@@ -225,5 +229,5 @@ add_group_ids <- function(dt, cols, group_col = "group_id", use_regex = TRUE, ..
   # Add to data.table by reference
   data.table::set(dt, j = group_col, value = group_ids)
   
-  return(invisible(dt))
+  return(invisible(dt[]))
 }

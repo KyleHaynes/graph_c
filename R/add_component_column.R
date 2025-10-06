@@ -17,15 +17,18 @@
 #'
 #' @examples
 #' # Create a data.table with edges
+#' require("data.table")
 #' dt <- data.table(source = c(1,2,5), target = c(2,3,6), weight = c(0.5, 0.8, 0.3))
+#' dt
 #' 
 #' # Add component column (modifies dt in place)
 #' add_component_column(dt, from_col = "source", to_col = "target")
 #' # Now dt has a 'component' column
 #' 
 #' # Or specify custom column name and don't modify original
-#' dt2 <- add_component_column(dt, component_col = "group_id", in_place = FALSE)
-#'
+#' dt2 <- add_component_column(dt, from_col = "source", to_col = "target",component_col = "group_id", in_place = FALSE)
+#' dt2
+#' 
 #' @export
 add_component_column <- function(dt, from_col = "from", to_col = "to", 
                                 component_col = "component", n_nodes = NULL, 
@@ -58,11 +61,11 @@ add_component_column <- function(dt, from_col = "from", to_col = "to",
   if (in_place) {
     # Modify in place
     dt[, (component_col) := component_ids]
-    return(invisible(dt))
+    return(invisible(dt[]))
   } else {
     # Return a copy
     dt_copy <- copy(dt)
     dt_copy[, (component_col) := component_ids]
-    return(dt_copy)
+    return(dt_copy[])
   }
 }

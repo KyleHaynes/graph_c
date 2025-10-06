@@ -13,7 +13,7 @@
 #'
 #' @examples
 #' edges <- matrix(c(1,2, 2,3, 5,6), ncol=2, byrow=TRUE)
-#' group_id <- group_edges(edges)  # Returns c(1, 1, 2) - component of each from node
+#' group_edges(edges)  # Returns c(1, 1, 2) - component of each from node
 #'
 #' @export  
 group_edges <- function(edges, n_nodes = NULL, compress = TRUE) {
