@@ -12,8 +12,8 @@ cat("=== Minimal GraphFast vs igraph Test ===\n")
 
 # Simple test graph
 test_edges <- data.table(
-  from = c(sample(2147483647, 1E6)),
-  to   = c(sample(2147483647, 1E6))
+  from = c(sample(21474847, 1E6)),
+  to   = c(sample(21474847, 1E6))
 )
 
 cat("Test graph:", nrow(test_edges), "edges\n")

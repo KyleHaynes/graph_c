@@ -1,4 +1,4 @@
-﻿# R specific
+# R specific
 .Rproj.user/
 .Rhistory
 .RData
@@ -38,3 +38,4 @@ Thumbs.db
 # Private/local configuration
 .env
 config_local.*
+/Meta/

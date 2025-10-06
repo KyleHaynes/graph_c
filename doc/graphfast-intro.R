@@ -1,56 +1,22 @@
----
-title: "High-Performance Graph Analysis with graphfast"
-author: "Kyle Haynes"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{High-Performance Graph Analysis with graphfast}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-```{r setup, include = FALSE}
+## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
   fig.height = 5
 )
-```
 
-# Introduction
+## ----eval=FALSE---------------------------------------------------------------
+# # From GitHub
+# devtools::install_github("KyleHaynes/graphfast")
+# 
+# # Build from source
+# devtools::install()
 
-The `graphfast` package provides high-performance algorithms for analyzing large-scale graphs in R. Built with optimized C++ implementations, it can handle graphs with hundreds of millions of edges efficiently. The package also includes advanced entity resolution capabilities and fast string matching functions.
-
-## Key Features
-
-- **Graph Analysis**: Connected components, shortest paths, connectivity queries
-- **Entity Resolution**: Multi-column grouping with the `group_id()` function
-- **String Matching**: Fast multi-pattern string matching with `%fgrepl%` operators
-- **Memory Efficiency**: Sparse representations and streaming algorithms
-- **Performance**: Optimized C++ implementations for massive datasets
-
-## Installation
-
-```{r eval=FALSE}
-# From GitHub
-devtools::install_github("KyleHaynes/graphfast")
-
-# Build from source
-devtools::install()
-```
-
-```{r}
+## -----------------------------------------------------------------------------
 library(graphfast)
-```
 
-## Entity Resolution with group_id()
-
-The `group_id()` function provides high-performance entity resolution and deduplication across multiple columns. It's perfect for finding records that represent the same entity despite variations in contact information.
-
-### Basic Entity Resolution
-
-```{r}
+## -----------------------------------------------------------------------------
 # Customer data with potential duplicates
 customers <- data.frame(
   customer_id = 1:6,
@@ -62,9 +28,8 @@ customers <- data.frame(
 )
 
 print(customers)
-```
 
-```{r}
+## -----------------------------------------------------------------------------
 # Find groups based on shared phone numbers and emails
 group_ids <- group_id(customers, 
                       cols = c("phone1", "phone2", "email"),
@@ -72,11 +37,8 @@ group_ids <- group_id(customers,
 
 customers$group_id <- group_ids
 print(customers)
-```
 
-### Advanced Entity Resolution
-
-```{r}
+## -----------------------------------------------------------------------------
 # Get detailed results with value mappings
 result <- group_id(customers, 
                    cols = c("phone1", "phone2", "email"),
@@ -84,13 +46,8 @@ result <- group_id(customers,
                    return_details = TRUE)
 
 print(result)
-```
 
-### Regex Column Selection
-
-The `group_id()` function supports regex patterns for column selection:
-
-```{r}
+## -----------------------------------------------------------------------------
 # Use regex to match column names (default behavior)
 group_ids_regex <- group_id(customers, 
                            cols = "phone",  # Matches "phone1", "phone2"
@@ -103,15 +60,8 @@ group_ids_exact <- group_id(customers,
                            incomparables = c(""))
 
 print("Results are identical:", identical(group_ids_regex, group_ids_exact))
-```
 
-## Fast String Matching
-
-The package includes optimized string matching functions that significantly outperform base R for multiple pattern searches.
-
-### Multi-Pattern Matching
-
-```{r}
+## -----------------------------------------------------------------------------
 # Sample data
 text_files <- c("error.log", "data.csv", "temp.txt", "config.json", 
                 "test_results.log", "backup.tmp", "user_data.xml")
@@ -124,11 +74,8 @@ print(matches)
 
 # Show matching files
 print(text_files[matches])
-```
 
-### Case-Insensitive Matching
-
-```{r}
+## -----------------------------------------------------------------------------
 # Case-insensitive version
 mixed_case <- c("ERROR.LOG", "Data.CSV", "TEMP.txt", "Test_File.doc")
 lower_patterns <- c("error", "temp", "test")
@@ -140,15 +87,8 @@ print(paste("Case-sensitive matches:", sum(case_sensitive)))
 # Case-insensitive (matches found)
 case_insensitive <- mixed_case %fgrepli% lower_patterns
 print(paste("Case-insensitive matches:", sum(case_insensitive)))
-```
 
-## Graph Analysis
-
-### Creating a Graph
-
-Graphs in `graphfast` are represented as edge lists - two-column matrices where each row represents an edge between two nodes.
-
-```{r}
+## -----------------------------------------------------------------------------
 # Create a simple graph
 edges <- matrix(c(
   1, 2,
@@ -161,27 +101,12 @@ edges <- matrix(c(
 ), ncol = 2, byrow = TRUE)
 
 print(edges)
-```
 
-### Finding Connected Components
-
-Connected components are maximal sets of nodes where every pair is connected by a path.
-
-```{r}
+## -----------------------------------------------------------------------------
 components <- find_connected_components(edges)
 print(components)
-```
 
-The result contains:
-- `components`: Vector assigning each node to a component ID
-- `component_sizes`: Size of each component  
-- `n_components`: Total number of components
-
-### Checking Connectivity
-
-You can efficiently check if specific pairs of nodes are connected:
-
-```{r}
+## -----------------------------------------------------------------------------
 # Check if these pairs are connected
 query_pairs <- matrix(c(
   1, 3,  # Same component
@@ -191,26 +116,12 @@ query_pairs <- matrix(c(
 
 connected <- are_connected(edges, query_pairs)
 print(connected)
-```
 
-### Computing Shortest Paths
-
-Find shortest path distances between node pairs:
-
-```{r}
+## -----------------------------------------------------------------------------
 distances <- shortest_paths(edges, query_pairs)
 print(distances)
-```
 
-A distance of -1 indicates no path exists between the nodes.
-
-## Performance Comparison
-
-Let's compare the performance of different approaches:
-
-### String Matching Performance
-
-```{r}
+## -----------------------------------------------------------------------------
 # Generate test data
 set.seed(42)
 test_strings <- paste0(sample(c("error", "data", "temp", "config", "user"), 1000, replace = TRUE),
@@ -233,11 +144,8 @@ cat("Base R time:", base_time["elapsed"], "seconds\n")
 cat("Fast time:", fast_time["elapsed"], "seconds\n")
 cat("Speedup:", round(base_time["elapsed"] / fast_time["elapsed"], 1), "x\n")
 cat("Results identical:", identical(as.logical(base_result), fast_result), "\n")
-```
 
-### Entity Resolution Performance
-
-```{r}
+## -----------------------------------------------------------------------------
 # Generate larger dataset for entity resolution
 set.seed(123)
 n_records <- 1000
@@ -261,13 +169,8 @@ cat("Entity resolution time:", entity_time["elapsed"], "seconds\n")
 cat("Records processed:", n_records, "\n")
 cat("Groups found:", max(large_groups), "\n")
 cat("Throughput:", round(n_records / entity_time["elapsed"]), "records/second\n")
-```
 
-### Graph Analysis Performance
-
-Let's test performance on a larger graph:
-
-```{r}
+## -----------------------------------------------------------------------------
 # Generate a random graph with 10,000 nodes and 50,000 edges
 set.seed(123)
 n_nodes <- 10000
@@ -282,9 +185,8 @@ large_edges <- matrix(
 large_edges <- large_edges[large_edges[,1] != large_edges[,2], ]
 
 cat("Graph size:", nrow(large_edges), "edges,", n_nodes, "nodes\n")
-```
 
-```{r}
+## -----------------------------------------------------------------------------
 # Benchmark connected components
 system.time({
   large_result <- find_connected_components(large_edges)
@@ -292,23 +194,13 @@ system.time({
 
 cat("Found", large_result$n_components, "components\n")
 cat("Largest component:", max(large_result$component_sizes), "nodes\n")
-```
 
-### Memory Efficiency
-
-The package uses memory-efficient algorithms:
-
-```{r}
+## -----------------------------------------------------------------------------
 # Graph statistics without storing full adjacency matrix
 stats <- graph_statistics(large_edges, n_nodes = n_nodes)
 print(stats)
-```
 
-## Real-World Applications
-
-### Customer Deduplication
-
-```{r}
+## -----------------------------------------------------------------------------
 # Realistic customer deduplication scenario
 customers_raw <- data.frame(
   customer_id = 1:10,
@@ -338,11 +230,8 @@ print(customers_raw)
 duplicate_summary <- table(customers_raw$duplicate_group)
 cat("Duplicate groups found:", sum(duplicate_summary > 1), "\n")
 cat("Total duplicates identified:", sum(duplicate_summary) - sum(duplicate_summary == 1), "\n")
-```
 
-### Log File Analysis
-
-```{r}
+## -----------------------------------------------------------------------------
 # Simulate log file analysis
 log_entries <- c(
   "2023-10-01 ERROR: Database connection failed",
@@ -368,10 +257,8 @@ cat("Warning entries found:", sum(warning_entries), "\n")
 # Show critical entries
 print("Critical log entries:")
 print(log_entries[critical_entries])
-```
-### Social Network Analysis
 
-```{r}
+## -----------------------------------------------------------------------------
 # Simulate a social network with communities
 generate_social_network <- function(n_users, connection_prob) {
   edges <- matrix(nrow = 0, ncol = 2)
@@ -395,11 +282,8 @@ cat("Social network with", nrow(social_edges), "friendships\n")
 communities <- find_connected_components(social_edges, n_nodes = 100)
 cat("Found", communities$n_components, "communities\n")
 cat("Community sizes:", paste(sort(communities$component_sizes, decreasing = TRUE), collapse = ", "), "\n")
-```
 
-### Web Graph Analysis
-
-```{r}
+## -----------------------------------------------------------------------------
 # Simulate web page links
 web_pages <- 500
 link_prob <- 0.01
@@ -426,15 +310,8 @@ cat("Average out-degree:", round(web_stats$degree_stats$mean, 2), "\n")
 # Find strongly connected components
 web_components <- find_connected_components(web_edges, n_nodes = web_pages)
 cat("Found", web_components$n_components, "connected regions\n")
-```
 
-## Advanced Features
-
-### Batch Processing
-
-For maximum efficiency, process multiple queries together:
-
-```{r}
+## -----------------------------------------------------------------------------
 # Generate many connectivity queries
 n_queries <- 1000
 query_nodes <- sample(1:100, 2 * n_queries, replace = TRUE)
@@ -447,11 +324,8 @@ system.time({
 
 cat("Processed", n_queries, "queries\n")
 cat("Connected pairs:", sum(batch_results), "out of", n_queries, "\n")
-```
 
-### Memory Monitoring
-
-```{r}
+## -----------------------------------------------------------------------------
 # Monitor memory usage for large graphs
 monitor_memory <- function(expr) {
   gc_before <- gc()
@@ -468,75 +342,4 @@ monitor_memory <- function(expr) {
 monitor_memory({
   test_result <- find_connected_components(large_edges)
 })
-```
 
-## Algorithm Details
-
-### Connected Components
-- Uses Union-Find with path compression and union by rank
-- Time complexity: O(m × α(n)) where α is inverse Ackermann function  
-- Space complexity: O(n)
-
-### Entity Resolution (group_id)
-- Union-Find algorithm for optimal grouping performance
-- Multi-column matching with configurable incomparable values
-- Time complexity: O(m × α(n)) where m is total values across columns
-- Memory efficient: processes millions of records with minimal overhead
-
-### String Matching
-- Optimized C++ multi-pattern search implementation
-- Boyer-Moore-inspired algorithms for fixed string patterns
-- Significantly faster than nested R loops for multiple patterns
-- Both case-sensitive and case-insensitive variants
-
-### Shortest Paths
-- Breadth-first search from each source node
-- Time complexity: O(m + n) per query
-- Early termination with maximum distance limits
-
-### Memory Optimization
-- Sparse graph representation using adjacency lists
-- No full adjacency matrix storage
-- Streaming algorithms for very large datasets
-
-## Best Practices
-
-### Graph Analysis
-1. **Use integer node IDs** starting from 1 for best performance
-2. **Specify n_nodes** when known to avoid scanning edges
-3. **Batch queries** together rather than processing individually  
-4. **Set distance limits** for shortest path queries when appropriate
-5. **Monitor memory** usage for very large graphs
-
-### Entity Resolution
-1. **Specify incomparable values** to exclude empty strings, NAs, etc.
-2. **Use regex column selection** for flexible column matching
-3. **Set minimum group sizes** to filter out singleton matches
-4. **Consider case sensitivity** based on your data characteristics
-5. **Use return_details=TRUE** for debugging and analysis
-
-### String Matching
-1. **Use %fgrepl%** for case-sensitive fixed string matching
-2. **Use %fgrepli%** for case-insensitive matching
-3. **Batch multiple patterns** rather than individual grepl() calls
-4. **Consider perl regex** for complex pattern requirements
-5. **Profile performance** with your specific data and patterns
-
-## Conclusion
-
-The `graphfast` package provides a comprehensive suite of high-performance tools for:
-
-- **Graph Analysis**: Connected components, shortest paths, and connectivity queries for massive graphs
-- **Entity Resolution**: Multi-column deduplication and record linkage with the `group_id()` function  
-- **String Processing**: Fast multi-pattern string matching with convenient infix operators
-
-Its optimized C++ implementations enable analysis of datasets that would be intractable with traditional R approaches, making it suitable for big data applications in:
-
-- Social network analysis and community detection
-- Customer deduplication and master data management  
-- Bioinformatics and protein interaction networks
-- Web graph analysis and link structure
-- Log file processing and pattern detection
-- Infrastructure network analysis
-
-The package scales efficiently to handle millions of records and hundreds of millions of edges while maintaining memory efficiency and providing intuitive R interfaces.
