@@ -2,6 +2,8 @@
 
 [![R-CMD-check](https://github.com/username/graphfast/workflows/R-CMD-check/badge.svg)](https://github.com/username/graphfast/actions)
 
+> **Note:** For comprehensive graph analysis with rich features, consider using [igraph](https://igraph.org/r/), which is a mature, robust, and feature-complete graph analysis library. The `graphfast` package is specifically optimized for **high-speed grouping operations** and entity resolution on large datasets, prioritizing performance over feature breadth.
+
 A high-performance R package for analyzing large-scale graphs with hundreds of millions of edges. Built with optimized C++ algorithms via Rcpp for maximum speed and memory efficiency.
 
 ## Features
