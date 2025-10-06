@@ -6,12 +6,26 @@ A high-performance R package for analyzing large-scale graphs with hundreds of m
 
 ## Features
 
+### Graph Analysis
 - **Memory-efficient**: Handles hundreds of millions of edges with minimal memory footprint
 - **Fast algorithms**: Optimized C++ implementations with advanced data structures
 - **Connected components**: Union-Find with path compression and union by rank
 - **Shortest paths**: Multi-source BFS with early termination
 - **Connectivity queries**: Fast pairwise connectivity checking
 - **Graph statistics**: Efficient computation without full adjacency storage
+
+### Entity Resolution & Deduplication
+- **Multi-column grouping**: `group_id()` function for entity resolution across multiple fields
+- **Incomparable values**: Exclude empty, NA, or custom values from matching
+- **Case sensitivity control**: Match with or without case sensitivity
+- **Minimum group sizes**: Filter out small groups automatically
+- **Memory efficient**: Uses Union-Find algorithm for optimal performance
+- **Data.table integration**: Seamless workflow with data.table
+
+### String Matching
+- **Multi-pattern matching**: Fast C++ implementation of fixed string search
+- **Convenience operators**: `%fgrepl%` and `%fgrepli%` for easy pattern matching
+- **Performance optimized**: Significantly faster than base R grepl() for multiple patterns
 
 ## Installation
 
@@ -21,6 +35,8 @@ devtools::install_github("KyleHaynes/graphfast")
 ```
 
 ## Quick Start
+
+### Graph Analysis
 
 ```r
 library(graphfast)
@@ -48,11 +64,117 @@ print(connected)  # c(TRUE, FALSE, TRUE)
 # Find shortest paths
 distances <- shortest_paths(edges, queries)
 print(distances)  # c(3, -1, 1)
+```
+
+### Entity Resolution with group_id()
+
+```r
+# Customer data with duplicate information across columns
+customers <- data.frame(
+  id = 1:6,
+  phone1 = c("123-456-7890", "987-654-3210", "123-456-7890", "", "555-0123", ""),
+  phone2 = c("", "987-654-3210", "555-1234", "123-456-7890", "", "555-0123"),
+  email = c("john@email.com", "jane@email.com", "john2@email.com", "john@email.com", "alice@email.com", "alice@email.com")
+)
+customers
+
+# Group records that share phone numbers or emails
+group_ids <- group_id(customers, 
+                      cols = c("phone1", "phone2", "email"),
+                      incomparables = c("", "NA"))
+
+customers$group_id <- group_ids
+print(customers)
+
+# Get detailed results
+result <- group_id(customers, 
+                   cols = c("phone1", "phone2", "email"),
+                   incomparables = c(""),
+                   return_details = TRUE)
+
+print(result)
+```
+
+### Fast String Matching
+
+```r
+# Multi-pattern string matching
+text <- c("hello world", "goodbye", "hello there", "world peace")
+patterns <- c("hello", "world")
+
+# Check if any pattern matches (fast C++ implementation)
+matches <- text %fgrepl% patterns
+print(matches)  # TRUE FALSE TRUE TRUE
+
+# Case-insensitive matching
+matches_ci <- text %fgrepli% patterns
+print(matches_ci)
+````
 
 # Get graph statistics
 stats <- graph_statistics(edges)
 print(stats$density)
 print(stats$degree_stats)
+```
+
+## Entity Resolution with group_id()
+
+The `group_id()` function provides high-performance entity resolution and deduplication across multiple columns. Perfect for finding records that represent the same entity despite having variations in contact information.
+
+```r
+library(graphfast)
+
+# Customer data with potential duplicates
+customers <- data.frame(
+  customer_id = 1:8,
+  name = c("John Smith", "Jane Doe", "J. Smith", "Bob Wilson", "Alice Brown", "John S.", "Jane D.", "Robert W."),
+  phone1 = c("123-456-7890", "987-654-3210", "123-456-7890", "", "555-0123", "", "987-654-3210", ""),
+  phone2 = c("", "987-654-3210", "555-1234", "123-456-7890", "", "123-456-7890", "", "999-888-7777"),
+  email = c("john@email.com", "jane@email.com", "john2@email.com", "john@email.com", "alice@email.com", "", "jane@email.com", "bob@email.com"),
+  stringsAsFactors = FALSE
+)
+
+# Find groups based on shared phone numbers and emails
+group_ids <- group_id(customers, 
+                      cols = c("phone1", "phone2", "email"),
+                      incomparables = c("", "NA", "Unknown"))
+
+customers$group_id <- group_ids
+print(customers)
+
+# Get detailed results with value mappings
+result <- group_id(customers, 
+                   cols = c("phone1", "phone2", "email"),
+                   incomparables = c(""),
+                   return_details = TRUE)
+
+print(result$value_map)  # Shows which values created the groups
+```
+
+### Key Features
+
+- **Multi-column matching**: Group records that share values across any specified columns
+- **Incomparable values**: Exclude empty strings, NAs, or custom values from matching
+- **Case sensitivity**: Control whether string comparisons are case-sensitive
+- **Minimum group size**: Filter out groups smaller than specified threshold
+- **Union-Find algorithm**: Optimal O(n α(n)) performance with path compression
+- **Memory efficient**: Processes millions of records with minimal memory usage
+
+### Data.table Integration
+
+```r
+library(data.table)
+
+# Convert to data.table
+dt <- as.data.table(customers)
+
+# Add group IDs efficiently
+add_group_ids(dt, 
+              cols = c("phone1", "phone2", "email"),
+              group_col = "entity_id",
+              incomparables = c(""))
+
+print(dt)
 ```
 
 ## Data.table Integration

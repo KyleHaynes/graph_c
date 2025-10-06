@@ -160,6 +160,79 @@ Implements breadth-first search with:
 - **Compressed IDs**: Maps sparse node IDs to dense arrays
 - **Streaming processing**: Handles graphs larger than memory
 
+## Examples and Testing
+
+The package includes comprehensive examples demonstrating various use cases and performance characteristics. All examples can be run from the `examples/` directory:
+
+### Core Graph Analysis Examples
+
+**`basic.R`** - Simple performance test using edge_components on large random graph data (180M edges). Demonstrates basic package functionality and timing.
+
+**`demo.R`** - Main demonstration script showcasing all core graph algorithms with sample data. Good starting point for new users.
+
+**`test_edge_components.R`** - Tests the new edge component functions with structured test cases including triangles, lines, and isolated components.
+
+**`comprehensive_test.R`** - Extensive test suite covering multiple graph algorithms with various graph structures and edge cases.
+
+### Performance and Comparison Tests
+
+**`compare_with_igraph.R`** - Head-to-head performance comparison between GraphFast and igraph package for connected components analysis on massive graphs (50M+ edges).
+
+**`performance_test.R`** - Scalable performance benchmark that accepts command-line arguments for testing different graph sizes and component counts.
+
+**`minimal_comparison.R`** - Lightweight comparison test for quick validation of performance improvements over standard approaches.
+
+### Entity Resolution and Deduplication Examples
+
+**`demo_group_id.R`** - Comprehensive demonstration of the group_id function for entity resolution, including phone number and email matching scenarios.
+
+**`test_group_id.R`** - Quick validation test for the group_id function after package rebuilds. Tests both C++ function directly and R wrapper.
+
+**`real_world_group_id.R`** - Realistic customer database deduplication scenario showing practical applications of entity resolution.
+
+**`group_id_benchmark.R`** - Performance benchmarking specifically for the group_id function with various data sizes and complexity.
+
+### String Matching and Processing
+
+**`test_string_matching.R`** - Tests multi-pattern string matching functions with various case sensitivity and pattern complexity scenarios.
+
+**`string_benchmark.R`** - Performance benchmark for string matching operations using 5M+ random strings against multiple patterns.
+
+**`demo_fgrepl.R`** - Demonstration of fast string matching capabilities with real-world text processing examples.
+
+### Memory and Stability Tests
+
+**`test_memory_safe.R`** - Validates memory safety and proper cleanup in C++ components under stress conditions.
+
+**`test_large_integers.R`** - Tests handling of large integer values and edge cases in node ID processing.
+
+**`test_large_integer_fix.R`** - Specific test for fixes related to large integer handling and type safety.
+
+**`test_simple.R`** - Basic smoke tests for quick validation that core functions are working correctly.
+
+### Running All Examples
+
+To run all examples and see comprehensive output:
+
+```r
+# Source all examples
+example_files <- list.files("examples", pattern = "\\.R$", full.names = TRUE)
+for (file in example_files) {
+  cat("\n" , "="*50, "\n")
+  cat("Running:", basename(file), "\n")
+  cat("="*50, "\n")
+  source(file)
+}
+```
+
+Or run individual examples:
+```r
+source("examples/demo.R")                    # Main demo
+source("examples/compare_with_igraph.R")     # Performance comparison  
+source("examples/demo_group_id.R")           # Entity resolution demo
+source("examples/performance_test.R")        # Scalability test
+```
+
 ## Development
 
 ### Running Tests

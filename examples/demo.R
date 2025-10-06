@@ -144,17 +144,17 @@ if (MASSIVE_SCALE) {
   cat("Testing connected components on massive graph...\n")
   cat("Monitoring memory usage...\n")
 
-  # Memory before processing
+  # Memory before processing - simplified approach
   gc_before <- gc()
-  mem_before_mb <- sum(gc_before[, "used"] * c(gc_before[1, "max"], 8)) / 1024^2
+  mem_before_mb <- sum(gc_before[, "used"]) * 8 / 1024^2  # Convert to MB
 
   start_time <- Sys.time()
   result1 <- find_connected_components(edges1)
   end_time <- Sys.time()
 
-  # Memory after processing
+  # Memory after processing - simplified approach  
   gc_after <- gc()
-  mem_after_mb <- sum(gc_after[, "used"] * c(gc_after[1, "max"], 8)) / 1024^2
+  mem_after_mb <- sum(gc_after[, "used"]) * 8 / 1024^2  # Convert to MB
   mem_used_mb <- mem_after_mb - mem_before_mb
 
   cat("MASSIVE GRAPH ANALYSIS RESULTS:\n")

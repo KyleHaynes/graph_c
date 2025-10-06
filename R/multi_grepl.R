@@ -49,8 +49,8 @@ multi_grepl <- function(strings, patterns, match_any = TRUE, ignore_case = FALSE
   }
   
   if (match_any) {
-    # Use optimized single-vector version
-    return(multi_grepl_any_cpp(strings, patterns, ignore_case))
+    # Use the optimized fast version automatically
+    return(multi_grepl_any_fast_cpp(strings, patterns, ignore_case))
   } else {
     # Use matrix version
     result_matrix <- multi_grepl_cpp(strings, patterns, match_any = FALSE, ignore_case)
@@ -68,4 +68,52 @@ multi_grepl <- function(strings, patterns, match_any = TRUE, ignore_case = FALSE
       return(result_df)
     }
   }
+}
+
+#' Fast Multi-Pattern String Matching Infix Operator
+#'
+#' Convenient infix operator alias for multi_grepl_any_fast_cpp().
+#' Provides a concise syntax for fast multi-pattern string matching.
+#'
+#' @param strings Character vector of strings to search in
+#' @param patterns Character vector of fixed patterns to search for
+#'
+#' @return Logical vector same length as strings, indicating if any pattern matches
+#'
+#' @examples
+#' strings <- c("hello world", "goodbye", "test file", "log entry")
+#' patterns <- c("hello", "log")
+#' 
+#' # Using the infix operator
+#' result <- strings %fgrepl% patterns
+#' # Returns: TRUE FALSE FALSE TRUE
+#' 
+#' # Equivalent to:
+#' result <- multi_grepl_any_fast_cpp(strings, patterns)
+#'
+#' @export
+`%fgrepl%` <- function(strings, patterns) {
+  multi_grepl_any_fast_cpp(strings, patterns, ignore_case = FALSE)
+}
+
+#' Fast Multi-Pattern String Matching Infix Operator (Case-Insensitive)
+#'
+#' Case-insensitive version of the fast multi-pattern matching infix operator.
+#'
+#' @param strings Character vector of strings to search in
+#' @param patterns Character vector of fixed patterns to search for
+#'
+#' @return Logical vector same length as strings, indicating if any pattern matches
+#'
+#' @examples
+#' strings <- c("Hello World", "GOODBYE", "Test File")
+#' patterns <- c("hello", "test")
+#' 
+#' # Case-insensitive matching
+#' result <- strings %fgrepli% patterns
+#' # Returns: TRUE FALSE TRUE
+#'
+#' @export
+`%fgrepli%` <- function(strings, patterns) {
+  multi_grepl_any_fast_cpp(strings, patterns, ignore_case = TRUE)
 }

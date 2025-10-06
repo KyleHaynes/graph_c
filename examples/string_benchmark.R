@@ -19,7 +19,7 @@ lengths <- sample(min_len:max_len, n, replace = TRUE)
 random_strings <- stri_rand_strings(n, lengths, pattern = "[A-Za-z0-9]")
 
 
-patterns <- c("log", "tmp", "test", "ca", "da", "longer stringgggg", "far", "foo", "bar", "baz")
+patterns <- c("log", "tmp", "test", "ca", "da", "longer stringgggg", "far", "foo", "bar", "baz", "aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii", "jj", "kk", "ll", "mm", "nn", "oo", "pp", "qq", "rr", "ss", "tt", "uu", "vv", "ww", "xx", "yy", "zz")
 cat("Testing", length(random_strings), "strings with", length(patterns), "patterns\n\n")
 
 # Benchmark 1: Multiple grepl calls
@@ -42,7 +42,7 @@ cat("   Matches:", sum(result2), "\n\n")
 # Benchmark 3: Our multi_grepl function
 cat("3. multi_grepl() function:\n")
 start_time <- Sys.time()
-result3 <- multi_grepl(random_strings, patterns, match_any = TRUE)
+result3 <- random_strings %fgrepl% patterns
 time3 <- as.numeric(Sys.time() - start_time)
 cat("   Time:", round(time3, 3), "seconds\n")
 cat("   Matches:", sum(result3), "\n\n")
@@ -63,3 +63,20 @@ cat("   multi_grepl speedup:", round(time3 / fastest_time, 2), "x\n\n")
 winner <- which.min(c(time1, time2, time3))
 methods <- c("Multiple grepl", "Regex alternation", "multi_grepl")
 cat("Winner:", methods[winner], "\n")
+
+# 1. Multiple grepl(fixed=TRUE) calls:
+#    Time: 2.271 seconds
+#    Matches: 39457
+
+# 2. Single grepl with regex alternation:
+#    Time: 1.386 seconds
+#    Matches: 39457
+
+# 3. multi_grepl() function:
+#    Time: 0.309 seconds
+#    Matches: 39457
+
+require(data.table)
+d <- data.table(result1, result2, result3)
+d[, all_equal := (result1 == result2) & (result1 == result3)]
+d[, .N, all_equal]
