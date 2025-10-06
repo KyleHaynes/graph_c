@@ -23,5 +23,7 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    microbenchmark
+    microbenchmark,
+    stringi,
+    data.table
 VignetteBuilder: knitr
